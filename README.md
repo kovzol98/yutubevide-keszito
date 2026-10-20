@@ -4,7 +4,7 @@ Magyar felületű Windows-program képekből, szövegből és saját videókból
 
 A helyi változat használatához nincs előfizetés és nincs kötelező fizetős API. Az AI-modelleket és az angol hangmotort az első használat előtt külön kell letölteni. A letöltés után a helyi videógenerálás és a Piper-narráció internet nélkül működik. Az áram- és hardverigény a saját gépedet terheli.
 
-Ez a forráskiadás a **12. javítás** ellenőrzött helyi programját tartalmazza. A választható Grok-kapcsolat fizetős külső szolgáltatás, saját xAI API-kulcsot igényel; az ingyenes helyi munkafolyamathoz nem szükséges. Valódi Grok-generálás minőségét ez a kiadás nem igazolja.
+Ez a forráskiadás a **13. javítás** helyi programját tartalmazza, mentett munkasorral több videó egymás utáni elkészítéséhez. A választható Grok-kapcsolat fizetős külső szolgáltatás, saját xAI API-kulcsot igényel; az ingyenes helyi munkafolyamathoz nem szükséges. Valódi Grok-generálás minőségét ez a kiadás nem igazolja.
 
 ## Mire képes?
 
@@ -16,6 +16,7 @@ Ez a forráskiadás a **12. javítás** ellenőrzött helyi programját tartalma
 - Jelenetek előnézete és hibás jelenet cseréje saját klippel, a hang és a zene megtartásával.
 - Zene cseréje az elkészült videón új AI-generálás nélkül.
 - Megszakadt helyi munka folytatása: a kész jelenetek átvétele új angol felolvasás és AI-generálás nélkül; csak a hiányzó részek készülnek újra.
+- Mentett munkasor: több helyi videó egymás után, külön beállításokkal; sorrendcsere, hibajelzés és kézi újrapróbálás.
 
 Az AI eredménye változó: az arc, a kezek és a ruharészletek torzulhatnak. A helyi motor minősége nem garantáltan egyezik meg a Grok mintavideókéval. A felbontás növelése önmagában nem javítja meg az arcot. Egy öt másodperces részletes jelenet is hosszú ideig készülhet.
 
@@ -45,6 +46,14 @@ A grafikus program **AI-motor és erőforrások** részén választhatsz meglév
 5. Indítsd a készítést. Az eredményt és a jeleneteket a választott kimeneti mappában találod.
 
 Az alkalmazás MP4-et készít; nem jelentkezik be a YouTube-fiókodba, és nem publikál automatikusan.
+
+## Több videó előkészítése
+
+A **05 Munkasor → Hozzáadás a munkasorhoz** elmenti az aktuális beállításokat. Ezután készítsd elő és add hozzá a következő videót. A **Munkasor megnyitása… → Munkasor indítása** sorban feldolgozza őket. Mentett projektfájlok egyszerre is hozzáadhatók. A sor helyi videóval és offline angol hanggal, saját hanggal vagy narráció nélkül használható.
+
+A **Leállás a jelenlegi után** befejezi az aktuális videót, majd megáll. A **Jelenlegi megszakítása** a futó videót is leállítja. A munkasor ablakának bezárásakor a feldolgozás tovább fut; a teljes program maradjon nyitva. Windows alatt a program a munkasor idejére kéri az automatikus alvás felfüggesztését, a kijelző kikapcsolhat. Sikertelen ébren tartási kérésnél jelzést ad.
+
+A munkasor a Windows felhasználó helyi alkalmazásadatai között marad meg. Újraindítás után nem indul el magától. A félbemaradt munka kézzel újrapróbálható; ez a teljes feladatot újrakezdi. A már megtartott jelenetek felhasználásához külön a **Megszakadt helyi munka folytatása…** használható. A forrásképek, videók és hangok maradjanak eredeti helyükön.
 
 ## EXE készítése
 

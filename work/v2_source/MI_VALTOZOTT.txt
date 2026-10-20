@@ -1,8 +1,39 @@
-YouTube Műhely 2 – megszakadt helyi munka folytatása
-Változat: 2026.10.20-local-resume-v12
+YouTube Műhely 2 – több videó egymás után, helyi munkasor
+Változat: 2026.10.20-local-queue-v13
 
-A fejlécben a 12. javítás látható. Ez a fejlesztés a helyben futó,
-offline használatot segíti; nem indít fizetős szolgáltatói kérést.
+A fejlécben a 13. javítás látható.
+Új rész: 05 Munkasor
+- Hozzáadás a munkasorhoz
+- Munkasor megnyitása…
+
+Készítsd elő az első videó beállításait, és add a munkasorhoz. Ezután
+átírhatod az űrlapot és hozzáadhatod a következő videót. Mindegyik külön
+beállításmentést kap; a későbbi módosítás nem írja át a korábbi munkát.
+A fotókat, videókat, zenét és saját hangfájlt hagyd az eredeti helyükön.
+
+A hozzáadás nem indít számítást. A munkasor ablakában külön indítsd el
+a feldolgozást. A videók egymás után készülnek, egyszerre egy helyi munka
+fut. A kész munkákat újraindításkor nem generálja ismét.
+
+Kérhető leállás az aktuális videó befejezése után. Az aktuális munka
+megszakítása a sort is megállítja; a következő munka nem indul el.
+Hibás videónál napló készül, majd a sor a következő munkával folytatódik.
+
+A mentett állapot újraindítás után megmarad. A megszakadt munkához kézi
+újrapróbálás kell; ez a teljes videót újrakezdi. A már mentett jelenetek
+külön a 12. javítás helyi folytatás gombjával használhatók újra.
+
+A munkasor kizárólag helyi videóval és offline hanggal dolgozik. Grok-
+videót és internetes narrációt nem vesz fel. A gépnek és a programnak
+futnia kell: éjszakára a Windows automatikus alvását kapcsold ki.
+Nincs automatikus számítógép-kikapcsolás. A helyi AI motorait és modelljeit
+előre telepítsd és ellenőrizd. Ez a fejlesztés a szervezést segíti,
+önmagában nem változtat az AI arcminőségén, fényén vagy sebességén.
+
+A 12. javításban bevezetett funkciók:
+
+A 12. javítás a helyben futó, offline használatot segítette;
+a megtartott funkció nem indít fizetős szolgáltatói kérést.
 
 Új gomb a 04 Jelenetek és javítás résznél:
 Megszakadt helyi munka folytatása…
@@ -10,8 +41,8 @@ Megszakadt helyi munka folytatása…
 A 12. javítással újonnan indított helyi, offline projektek a kész
 jelenetek után folytatas.json mentést is kapnak. A helyi AI-videó,
 saját videó és diavideó offline LJ hanggal, saját hanggal vagy narráció
-nélkül folytatható. Megszakítás vagy hiba után válaszd ki a projekt
-mappáját, projekt.json vagy folytatas.json fájlját. A már elkészült, ellenőrzött
+nélkül folytatható. Megszakítás vagy hiba után a projektmappából válaszd
+ki a projekt.json vagy folytatas.json fájlt. A már elkészült, ellenőrzött
 jeleneteket a hangjukkal és feliratukkal együtt átveszi; nem generálja
 és nem olvassa fel újra őket. Csak a hiányzó jelenetek készülnek el.
 Ha valamennyi jelenet megvan, csak a végső összeállítást kell elvégezni;

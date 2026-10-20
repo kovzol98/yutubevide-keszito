@@ -5,9 +5,44 @@ from datetime import datetime
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+# Queue/resume modules import the shared Project and Cancelled definitions.
+# Direct source and frozen launches must reuse this initialized main module.
+if __name__=='__main__':sys.modules.setdefault('ytmuhely',sys.modules[__name__])
+
 CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
-APP_RELEASE = '2026.10.20 • 12. javítás'
+APP_RELEASE = '2026.10.20 • 13. javítás'
 class Cancelled(Exception): pass
+
+def queue_file():
+    """Per-user queue, independent of the extracted program's version folder."""
+    override=os.environ.get('YTMUHELY_QUEUE_FILE','').strip()
+    if override:return Path(override).expanduser().resolve()
+    base=Path(os.environ.get('LOCALAPPDATA') or Path.home()/'AppData/Local')
+    return base/'YouTubeMuhely2'/'munkasor.json'
+
+def run_local_queue(filename):
+    """Headless execution uses the same persisted offline queue as the GUI."""
+    from render_queue import QueueStore,QueueRunner
+    request=Path(filename)
+    data=json.loads(request.read_text(encoding='utf-8-sig'))
+    path=Path(data['queue_file']).expanduser()
+    if not path.is_absolute():path=request.resolve().parent/path
+    store=QueueStore(path)
+    try:
+        runner=QueueRunner(store,Engine)
+        runner.start()
+        runner.join()
+        if runner.last_error:
+            raise RuntimeError('A munkasor állapotát nem sikerült biztonságosan menteni: '+str(runner.last_error))
+        jobs=store.items()
+        result={name:[{'id':job['id'],'result':job.get('result',''),'error':job.get('error','')}
+            for job in jobs if job['status']==state]
+            for name,state in [('completed','complete'),('failed','failed'),
+                ('cancelled','cancelled'),('interrupted','interrupted'),('pending','pending')]}
+        request.with_suffix('.result.json').write_text(
+            json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+        return result
+    finally:store.close()
 
 @dataclass
 class Project:
@@ -732,6 +767,8 @@ def gui():
     values = {}; images = []; videos = []; events = queue.Queue()
     refresh_plan = [lambda: None]
     current = [None]; last = [None]; last_movie=[None]
+    queue_store=[None];queue_runner=[None];queue_window=[None];queue_open_button=[None]
+    closing=[False]
     busy = [False]; controls = []; inputs = []
     def button(parent, label, command, **kwargs):
         widget = ttk.Button(parent, text=label, command=command, **kwargs)
@@ -891,6 +928,67 @@ def gui():
         'Csereklippel új változat készül, az eredeti angol hanggal és zenével. '
         'A jelenetcsere helyben fut, új AI-generálás nélkül.',pady=(7,0))
 
+    queue_card=card(left,'05  Munkasor',
+        'Készíts elő több videót; a program egymás után dolgozza fel őket.')
+    queue_summary=tk.StringVar(value='A mentett munkasor külön indítható.')
+    def update_queue_summary():
+        if queue_store[0] is None:return
+        jobs=queue_store[0].items()
+        waiting=sum(job['status']=='pending' for job in jobs)
+        complete=sum(job['status']=='complete' for job in jobs)
+        failed=sum(job['status'] in ('failed','cancelled','interrupted') for job in jobs)
+        queue_summary.set(f'{waiting} várakozó  ·  {complete} elkészült  ·  {failed} figyelmet kér')
+    def ensure_queue():
+        if queue_store[0] is None:
+            from render_queue import QueueStore,QueueRunner
+            store=QueueStore(queue_file())
+            try:
+                runner=QueueRunner(store,Engine,
+                    on_event=lambda kind,data:events.put(('queue_event',(kind,data))))
+            except Exception:
+                store.close();raise
+            queue_store[0]=store;queue_runner[0]=runner
+            update_queue_summary()
+        return queue_store[0],queue_runner[0]
+    def queue_start_allowed():
+        if closing[0]:return False
+        if busy[0]:
+            messagebox.showinfo('Munkasor','Előbb várd meg a folyamatban lévő művelet végét.')
+            return False
+        if not any(job['status']=='pending' for job in queue_store[0].items()):return False
+        set_busy(True);progress.set(0);status.set('A munkasor indul…')
+        return True
+    def queue_start_failed():
+        if queue_runner[0] is None or not queue_runner[0].is_running:
+            current[0]=None;set_busy(False);status.set('A munkasor nem indult el.')
+    def open_queue():
+        try:
+            store,runner=ensure_queue()
+            if queue_window[0] is not None and queue_window[0].winfo_exists():
+                queue_window[0].lift();queue_window[0].focus_force();return
+            from render_queue_ui import show
+            queue_window[0]=show(app,store,runner,get_project=snapshot,
+                on_start=queue_start_allowed,on_start_failed=queue_start_failed)
+        except Exception as error:messagebox.showerror('Munkasor',str(error))
+    def enqueue_project():
+        try:
+            sync_requested_motion()
+            project=snapshot()
+            store,runner=ensure_queue()
+            job=store.add(project)
+            update_queue_summary()
+            status.set('Munkasorba hozzáadva: '+job['title']+'. A munkasor ablakában indítható.')
+        except Exception as error:messagebox.showerror('Munkasor',str(error))
+    button(queue_card,'Hozzáadás a munkasorhoz',enqueue_project,
+        style='Small.TButton').pack(anchor='w')
+    queue_open_button[0]=button(queue_card,'Munkasor megnyitása…',open_queue,
+        style='Small.TButton')
+    queue_open_button[0].pack(anchor='w',pady=(8,0))
+    hint(queue_card,textvariable=queue_summary,pady=(7,0))
+    hint(queue_card,'A hozzáadás elmenti az aktuális beállításokat. A forrásképeket, '
+        'videókat és zenéket tartsd a helyükön. A munkasor helyi móddal és offline hanggal működik.',
+        pady=(6,0))
+
     def disclosure(parent, label):
         shell = tk.Frame(parent, bg=colors['card'], highlightbackground=colors['border'], highlightthickness=1)
         shell.pack(fill='x', pady=(0, 12))
@@ -911,6 +1009,7 @@ def gui():
     def set_busy(flag):
         busy[0] = flag
         for widget in controls: widget.configure(state='disabled' if flag else 'normal')
+        if queue_open_button[0] is not None:queue_open_button[0].configure(state='normal')
         cancel_button.configure(state='normal' if flag else 'disabled')
         refresh_plan[0]()
     def ai(use_images):
@@ -1247,8 +1346,11 @@ def gui():
     primary_button.pack(side='left', padx=(0, 9))
     if '--ui-check-grok' in sys.argv:values['visual_mode'].set(GROK_MODE)
     explain_plan()
-    cancel_button = ttk.Button(actions, text='Megszakítás', state='disabled',
-                               command=lambda: current[0].cancel.set() if current[0] else None)
+    def cancel_active():
+        if queue_runner[0] is not None and queue_runner[0].is_running:
+            queue_runner[0].cancel_current()
+        elif current[0]:current[0].cancel.set()
+    cancel_button = ttk.Button(actions, text='Megszakítás', state='disabled',command=cancel_active)
     cancel_button.pack(side='left')
     def open_output():
         output = last[0] or Path(values['output'].get())
@@ -1314,6 +1416,7 @@ def gui():
     menu.add_command(label='Projekt mentése', command=lambda: save_project() if not busy[0] else None)
     menu.add_command(label='Projekt betöltése', command=lambda: load_project() if not busy[0] else None)
     menu.add_command(label='Elkészült jelenetek…',command=open_scenes)
+    menu.add_command(label='Munkasor…',command=open_queue)
     pump_timer = [None]
     def pump():
         try:
@@ -1323,6 +1426,27 @@ def gui():
                     status.set(data)
                     if data.startswith('Videomemória:'):resource_hint.set(data)
                 elif kind == 'progress': progress.set(data)
+                elif kind=='queue_event':
+                    event,payload=data
+                    update_queue_summary()
+                    if event=='job':
+                        if payload['status']=='running':
+                            current[0]=queue_runner[0].active_engine
+                            status.set('Munkasor: '+payload['title']);progress.set(0)
+                        elif payload['status']=='complete' and payload.get('result'):
+                            last_movie[0]=Path(payload['result']);last[0]=last_movie[0].parent
+                    elif event=='progress':progress.set(payload['progress'])
+                    elif event=='log':status.set('Munkasor: '+payload['message'])
+                    elif event=='error':status.set('Munkasorhiba: '+payload['message'])
+                    elif event=='done':
+                        current[0]=None;set_busy(False)
+                        jobs=queue_store[0].items()
+                        attention=sum(job['status'] in ('failed','cancelled','interrupted') for job in jobs)
+                        if payload.get('error'):
+                            status.set('A munkasor leállt mentési hiba miatt: '+str(payload['error']))
+                        else:
+                            status.set(('A munkasor leállt. ' if payload.get('stopped') else 'A munkasor elkészült. ')
+                                +f'{attention} feladat kér figyelmet. Részletek a munkasor ablakában.')
                 elif kind == 'setup': status.set('Az AI-motor telepítve. Indíthatod a videó készítését.'); set_busy(False)
                 elif kind == 'resources':resource_hint.set(data);status.set(data);set_busy(False)
                 elif kind == 'ai':
@@ -1354,19 +1478,34 @@ def gui():
         except queue.Empty: pass
         pump_timer[0] = app.after(100, pump)
     def close():
+        closing[0]=True
         editor_open=scene_window[0] is not None and scene_window[0].winfo_exists()
         if editor_open:scene_window[0].scene_library_view.close()
+        if queue_runner[0] is not None and queue_runner[0].is_running:
+            queue_runner[0].cancel_current()
+            status.set('A munkasor megszakítása és mentése…');app.after(200,finish_close);return
         if busy[0]:
-            current[0].cancel.set(); status.set('Megszakítás folyamatban…'); app.after(200, finish_close)
+            if current[0] is not None:current[0].cancel.set()
+            status.set('Megszakítás folyamatban…'); app.after(200, finish_close)
         elif editor_open:app.after(200,finish_close)
-        else: app.destroy()
+        else: destroy_app()
+    def destroy_app():
+        if queue_store[0] is not None:queue_store[0].close()
+        app.destroy()
     def finish_close():
         editor_open=scene_window[0] is not None and scene_window[0].winfo_exists()
-        if busy[0] or editor_open: app.after(200, finish_close)
-        else: app.destroy()
+        queue_running=queue_runner[0] is not None and queue_runner[0].is_running
+        if busy[0] or editor_open or queue_running: app.after(200, finish_close)
+        else: destroy_app()
     app.protocol('WM_DELETE_WINDOW', close); pump()
     if '--ui-check' in sys.argv or '--ui-preview-data' in sys.argv:
+        gui_context=locals()
         def check_ui():
+            queue_flow=None
+            if '--ui-check-queue-flow' in sys.argv:
+                from render_queue_ui import diagnose_main
+                report_arg=sys.argv[sys.argv.index('--ui-check')+1]
+                queue_flow=diagnose_main(gui_context,Path(report_arg).with_suffix('.queue-flow.json'))
             app.update_idletasks()
             def box(widget):
                 return [widget.winfo_rootx() - app.winfo_rootx(), widget.winfo_rooty() - app.winfo_rooty(),
@@ -1400,6 +1539,7 @@ def gui():
                     widgets.append(widget_data(child)); visit(child)
             visit(outer)
             report = {'window': [app.winfo_width(), app.winfo_height()], 'palette': colors,
+                      'queue_flow': queue_flow,
                       'scroll_content': right.winfo_reqheight(), 'viewport': canvas.winfo_height(),
                       'left_scroll_content': left.winfo_reqheight(), 'left_viewport': left_canvas.winfo_height(),
                       'actions_visible': action_box[1] >= 0 and action_box[1] + action_box[3] <= app.winfo_height(),
@@ -1445,6 +1585,15 @@ if __name__=='__main__':
         except Exception:
             # Avoid a blocking Windows error dialog in the background worker.
             sys.exit(1)
+    elif len(sys.argv)>1 and sys.argv[1] in ('--run-local-queue','--queue-ui-check'):
+        try:
+            if sys.argv[1]=='--run-local-queue':run_local_queue(sys.argv[2])
+            else:
+                from render_queue_ui import ui_check
+                ui_check(sys.argv[2])
+        except Exception:
+            import traceback
+            Path(sys.argv[2]).with_suffix('.error.txt').write_text(traceback.format_exc(),encoding='utf-8');sys.exit(1)
     elif len(sys.argv)>1 and sys.argv[1] in ('--render','--remix','--scene-edit','--scene-ui-check','--resume-local'):
         try:
             data=json.loads(Path(sys.argv[2]).read_text(encoding='utf-8-sig'))

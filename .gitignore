@@ -21,6 +21,8 @@ AI_MOTOR_HELYE.txt
 README_AI_MOTOR.txt
 *project*.json
 grok_job.json
+munkasor.json
+munkasor.json.lock
 installation.json
 
 # Downloaded runtimes, models and media

@@ -1,6 +1,6 @@
 # YouTube Műhely 2 – fotóból mozgó jelenet
 
-Változat: `2026.10.20-local-resume-v12` · 12. javítás
+Változat: `2026.10.20-local-queue-v13` · 13. javítás
 
 Magyar Windows-program, angol narrációval és hozzáadható háttérzenével. Szövegből vagy fotóból mozgó jeleneteket készít, majd feltölthető MP4-videóvá állítja össze őket. Alapból helyben számol; külön választható, fizetős Grok internetes kapcsolat is van. A kezelőfelület meleg grafit, krém és borostyán színű.
 
@@ -18,9 +18,23 @@ Ezen a gépen a motor már telepítve van. Ha a program más helyre kerül, az *
 
 A készítés indításakor a program minden felhasznált fotó és videó olvashatóságát ellenőrzi, még az első jelenet elkészítése vagy AI-generálása előtt. A hiányzó vagy sérült forrást előbb cseréld ki.
 
+## Több videó egymás után: munkasor
+
+A **05 Munkasor → Hozzáadás a munkasorhoz** gomb elmenti az éppen beállított videó külön munkapéldányát. Utána átírhatod a címet, választhatsz más fotót, jelenetleírást, angol hangot vagy zenét, és hozzáadhatod a következő videót. A későbbi szerkesztés nem változtatja meg a már felvett munkák beállításait. A képeket, videókat, zenét és saját narrációs fájlokat a munkasor nem másolja át: hagyd őket az eredeti helyükön a munka végéig.
+
+A **Munkasor megnyitása…** gomb mutatja az előkészített, futó, kész és hibás munkákat. A hozzáadás önmagában nem indít számítást. A munkasor ablakában a **Munkasor indítása** gombbal külön indítsd el a feldolgozást. A **Mentett projektek hozzáadása…** gombbal korábban mentett helyi projektfájlokat is felvehetsz. A várakozó munkákat a fel és le gombokkal átrendezheted. A program egyszerre egy videót készít; így a helyi AI-feladatok nem versenyeznek egymással a videókártyáért. Az elkészült videók a munkánként megadott eredménymappába kerülnek. A kész munkát újabb indítás nem készíti el ismét.
+
+A munkasor helyi **AI-videó**, **Saját videók** és **Képes diavideó** készítésére használható. Az **Angol női LJ • offline**, saját narrációs hangfájl vagy narráció nélküli beállítás támogatott. **Grok-videót és internetes narrációt nem vesz fel**, és nem indít automatikus fizetős generálást. A helyi AI-hoz szükséges motort és modelleket az éjszakai használat előtt telepítsd és próbáld ki.
+
+A **Leállás a jelenlegi után** gomb a futó videót hagyja befejeződni, majd megáll. A **Jelenlegi megszakítása** a futó videót állítja le, és a következő munkát sem indítja el. A kész eredmények megmaradnak. Egy hibás munka hibajelzést és naplót kap; a program a következő várakozó munkával folytatja a sort.
+
+A munkák és állapotuk a gépen tartós mentést kapnak. A munkasor a saját Windows-felhasználódhoz tartozik, így egy új programmappa kicsomagolásától nem tűnik el. A program újraindítása után a félbeszakadt munka nem indul el magától: kijelölés után az **Újrapróbálás** gombbal ismét várakozóvá teheted, majd indítsd el a sort. Ez a teljes videó újrakezdése, nem a félbeszakadt AI-számítás folytatása. Ha a félkész eredménymappában már vannak kész jelenetek és `folytatas.json`, azokat külön a **04 Jelenetek és javítás → Megszakadt helyi munka folytatása…** gombbal hasznosíthatod újra.
+
+Éjszakai használathoz a programnak futnia kell, a gépnek bekapcsolva kell maradnia. A Windows energiabeállításaiban a munka idejére kapcsold ki az automatikus alvást; a kijelző kikapcsolása önmagában nem akadály. A program a munkasor végén nem kapcsolja ki a számítógépet. A munkasor időt takarít meg az indításoknál, a videónkénti AI-számítást nem gyorsítja és a képminőséget nem módosítja.
+
 ## Megszakadt helyi munka folytatása
 
-A 12. javítással **újonnan indított helyi, offline projektek** a kész jelenetek után `folytatas.json` mentést is kapnak. Ez a helyi AI-videóhoz, saját videókhoz és képes diavideóhoz használható, az offline LJ hanggal, saját narrációs hangfájllal vagy narráció nélkül. Ha megszakítod a munkát, hiba történik, vagy bezárod a programot, a **04 Jelenetek és javítás → Megszakadt helyi munka folytatása…** gombbal válaszd ki a félkész projekt mappáját, `projekt.json` vagy `folytatas.json` fájlját. A folytatáshoz őrizd meg a teljes eredménymappát, annak JSON-fájljait és az elkészült jeleneteket.
+A 12. javítástól **újonnan indított helyi, offline projektek** a kész jelenetek után `folytatas.json` mentést is kapnak. Ez a helyi AI-videóhoz, saját videókhoz és képes diavideóhoz használható, az offline LJ hanggal, saját narrációs hangfájllal vagy narráció nélkül. Ha megszakítod a munkát, hiba történik, vagy bezárod a programot, a **04 Jelenetek és javítás → Megszakadt helyi munka folytatása…** gombbal a félkész projekt mappájából válaszd ki a `projekt.json` vagy `folytatas.json` fájlt. A folytatáshoz őrizd meg a teljes eredménymappát, annak JSON-fájljait és az elkészült jeleneteket.
 
 A program ellenőrzi a mentett beállításokat és a bemeneti fájlok tartalmát. Az eredeti fotókat, videókat, zenét és saját narrációs hangot hagyd a korábbi helyükön, változatlanul; az átnevezett, elmozdított vagy módosított forrást elutasítja. Így nem kever össze másik fotóból vagy másik beállítással készült jeleneteket.
 
