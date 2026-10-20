@@ -1,0 +1,181 @@
+YouTube Műhely 2 – megszakadt helyi munka folytatása
+Változat: 2026.10.20-local-resume-v12
+
+A fejlécben a 12. javítás látható. Ez a fejlesztés a helyben futó,
+offline használatot segíti; nem indít fizetős szolgáltatói kérést.
+
+Új gomb a 04 Jelenetek és javítás résznél:
+Megszakadt helyi munka folytatása…
+
+A 12. javítással újonnan indított helyi, offline projektek a kész
+jelenetek után folytatas.json mentést is kapnak. A helyi AI-videó,
+saját videó és diavideó offline LJ hanggal, saját hanggal vagy narráció
+nélkül folytatható. Megszakítás vagy hiba után válaszd ki a projekt
+mappáját, projekt.json vagy folytatas.json fájlját. A már elkészült, ellenőrzött
+jeleneteket a hangjukkal és feliratukkal együtt átveszi; nem generálja
+és nem olvassa fel újra őket. Csak a hiányzó jelenetek készülnek el.
+Ha valamennyi jelenet megvan, csak a végső összeállítást kell elvégezni;
+ilyenkor a folytatás nem igényel AI-motort.
+
+A megszakadt, még be nem fejezett aktuális jelenet újrakezdődik.
+A funkció nem folytatja egy modell félbeszakadt számítását képkockánként.
+Külön eredménymappába dolgozik, az eredeti félkész projekt megmarad.
+
+A mentett beállítások és a források tartalma ellenőrzőlenyomatot kapnak.
+A fotókat, videókat, zenét és saját narrációs hangot őrizd meg ugyanott,
+változatlanul. Módosított, elmozdított vagy hiányzó bemenetet, illetve
+eltérő beállítást a folytatás elutasít. Az eredménymappát is egyben tartsd.
+
+Csak az új, 12. javítással induló mentéseket támogatja. A 11. és régebbi
+kiadások félkész projektjeihez nem hoz létre utólag folytatási mentést.
+Grok-generálást és internetes narrációt ezzel a gombbal nem folytat.
+A külön Grok API-kapcsolat megmaradt, és továbbra is fizetős.
+
+Az angol offline hang, a háttérzene, a zenecsere és a saját cserevideóval
+végzett jelenetjavítás megmaradt. Az új funkció nem javítja önmagában
+a helyi AI-generálás arcrészleteit vagy fényminőségét.
+
+A 11. javításban bevezetett funkciók:
+
+A 11. javítástól az újonnan készített videók külön
+jelenetei és feliratai megmaradnak. A 04 Jelenetek és javítás résznél
+az Elkészült jelenetek… gomb megnyitja az előnézetet és a jelenetlistát.
+
+Egy vagy több jelenet képét saját cserevideóra cserélheted. Új változat
+készül külön almappában, az eredeti teljes narrációval és zenével.
+A jelenethossz és felirat megmarad; a cserevideó hangját nem használja.
+A túl rövid klipet jelzi, a hosszabbat a megfelelő hosszra vágja.
+A kép egységes újrakódolást kap; a teljes eredeti hangot változatlanul
+emeli át. A későbbi zenecsere már a szerkesztett képet használja.
+
+A jelenetcsere nem indít új AI-generálást vagy fizetős Grok-kérést.
+Meglévő csereklipet igényel; önmagában nem oldja meg az AI-arctorzulást.
+A félkész projekt mentett jelenetei megnézhetők; cseréhez a teljes
+eredeti videó és hangalap szükséges. Korábbi kiadások eredményeihez
+nem hoz létre utólag automatikus jelenetbontást.
+
+Az angol narráció, a háttérzene, a helyi alapértelmezés és a külön
+választható Grok API-kapcsolat megmaradt.
+
+A 10. javításban bevezetett funkciók:
+
+Új választható forrás: Grok videó • internet, a grok-imagine-video-1.5
+modellel. Ez fizetős, kísérleti xAI API-kapcsolat. A teljes fotót és az
+angol leírást elküldi a szolgáltatónak; a jelenet ott készül. Alapból a
+helyi AI-mód marad kiválasztva. A Grokhoz nem kell helyi AI-motort indítani.
+Szövegből és referenciafotóból is kérhető jelenet, 720p vagy 1080p méretben.
+
+Saját xAI API-kulcs és külön API-számlázási fedezet szükséges. A fogyasztói
+Grok-előfizetés nem biztosít ingyenes API-használatot. A takart kulcsmező
+csak a futó programban él; a kulcs nem kerül a mentett projektbe vagy a
+naplóba. Parancssorban az XAI_API_KEY környezeti változó is használható.
+
+A fizetős jelenetek darabszámkorlátja alapból 1, a jelenethossz 1–15 mp.
+A program a jelenetszámot és az összes narráció tényleges hosszát az első
+fizetős kérés előtt ellenőrzi. A hossz egész másodpercre felfelé kerekítve
+kerül az API-hoz. A korlát darabszámot jelent, nem pénzkeretet.
+
+A 2026.10.20-i hivatalos árlistából számolt becslés: 720p-n 0,14 USD/mp,
+1080p-n 0,25 USD/mp, plusz 0,01 USD/bemeneti kép. Egy 5 mp-es, egyképes
+jelenet becslése 0,71, illetve 1,26 USD. Ez nem ellenőrzött fiókterhelés;
+az aktuális díjat és számlát az xAI oldalán ellenőrizd.
+Árlista: https://docs.x.ai/developers/pricing
+API-fiók: https://docs.x.ai/developers/faq/accounts
+
+A Fizetős Grok-videó indítása gomb külön jelzi a fizetős műveletet.
+Megszakításkor csak a várakozás áll le: az elküldött feladat tovább futhat
+és számlázható. Hálózati hiba vagy időtúllépés nem indít új generálást.
+A Grok-feladat eredményének mentése… gomb a megőrzött grok_job.json
+azonosítójával csak a meglévő feladatot kéri le. A mentett nyers videó
+saját klipként betölthető angol narráció és zene hozzáadásához. Ha a
+beküldési válasz elveszett, és nincs feladatazonosító, előbb a szolgáltatói
+fiókban kell ellenőrizni a kérés állapotát. Őrizd meg az eredménymappát.
+
+Valódi, hitelesített Grok-generálás még nem történt. A kapcsolatot
+szimulált válaszokkal, a letöltött videó ellenőrzését és az angol hanggal,
+zenével készült exportot helyi próbákkal ellenőriztük. A szolgáltatás
+valódi minősége, ideje és a küldött Grok-mintával való egyezés nincs
+igazolva. A helyi motor arcproblémáit ez a kiadás nem tekinti megoldottnak.
+
+A megtartott helyi fejlesztések:
+
+Javult az AI-generálás és a mozgássimítás közötti átadás. A program a
+saját, igazoltan szabad videómotorát leállítja, és csak annak kilépése
+után indítja a simítást a videókártyán. Ha a motor közben másik feladatot
+kapott vagy az állapota nem ellenőrizhető, a kész képkockákat CPU-val
+dolgozza fel. Ez lassabb lehet, de elkerüli, hogy két feldolgozó ugyanazért
+a videomemóriáért versenyezzen. Másik feladatot nem állít le.
+
+Az új, nagyobb képrészletekkel végzett dekódolási próba ugyanabból a
+mentett jelenetből nem mutatott látható arc- vagy fényjavulást, ezért
+az nem került be ebbe a kiadásba. A kisebb alapmodell külön próbája
+gyorsabban elkészült, de gyengébb arcot és változóbb fényeket adott;
+ezért a fotók alapértelmezett motorja továbbra is az Élethű 14B.
+
+Az alapmotor telepítése és automatikus modellválasztása a Wan 5B
+alapmodellt követi. A közösségi Turbo 5B változat eredeti projektjének
+és GGUF-változatának licencjelölése eltér; ezt már nem kezeli automatikus
+programösszetevőként. A helyi fájlokat a frissítés nem törli. A fotóhoz
+alapértelmezett Élethű 14B motor és a korábbi mozgásjavítások megmaradnak.
+
+A kisebb memóriaigényű FP8-változat teljes, öt másodperces próbája
+körülbelül ugyanannyi ideig tartott, mint az alapváltozaté, és nem adott
+jobb arcot vagy fényeket. Emiatt ez sem került alapbeállításként a
+programba. A kisebb súlyméret nem jelentett gyorsabb teljes videókészítést.
+
+Új, indítás előtti videomemória-ellenőrzés jelzi a legalább 2 GiB-ot
+foglaló más folyamatokat. Kézzel is futtatható az AI-motor és erőforrások
+részben. A kijelzés megmarad a részletességi beállítás alatt. Ha a Windows
+nem szolgáltat adatot, ezt külön jelzi. Az ellenőrzés csak adatot olvas.
+
+Az AI-arcjavítás külön, alapból kikapcsolt beállítás lett. A korábbi
+automatikus előkészítés bizonytalan szem- és szemüvegrészleteket is
+felerősíthetett. Most a forrás arcát alapból változatlanul használja;
+a végső MP4 finom élesítése ettől függetlenül választható. A Kar- és
+testmozgás minta kifejezetten helyben maradást és állandó távolságot kér.
+
+Új projektnél a Részletes AI-generálás az alapbeállítás. A korábban mentett
+projektek megtartják a saját részletességüket. A felület külön jelzi a
+tényleges AI-képméretet és az exportméretet: az 1080p-s mentés önmagában
+nem ad új részleteket egy kisebb felbontásban generált archoz.
+
+Fotónál a Leírás szerinti mozgás mód már nem indul üres jelenetleírással.
+A korábbi működés ilyenkor csak nagyon finom mozgást kért, ami hosszú
+számítás után is szinte álló szereplőt eredményezhetett. A Kar- és
+testmozgás, Séta és Tánc gomb egy szerkeszthető angol cselekvésmintát
+illeszt a leírás helyére, és kiválasztja a hozzá tartozó mozgásmódot.
+
+Új Fotó keretezése választó:
+- Teljes fotó: továbbra is ez az alapérték, a teljes bemenet megmarad.
+- Alanyra közelítés: széles fotónál a felismert arc körül 3:4 arányú,
+  keskenyebb képet választ. Az oldalakból vág, a teljes képmagasságot
+  megtartja. Ha nincs felismert arc, a teljes fotót használja.
+
+A közelítés az Élethű motor teljes jelenetet generáló módjaival használható.
+Még a generálás előtt történik; nem illeszt külön fejréteget a videóra.
+A Fotó eredeti aránya export az így előkészített első kép arányát követi.
+A szűkebb képen több részlet juthat a szereplőre, de kevesebb oldalsó
+környezet marad látható. A külön Portré mód továbbra is választható.
+
+Első próbához 2–3 másodperces jelenetet és konkrét, mérsékelt mozgást kérj.
+A Részletes számítás így is több tíz percig tarthat. Sétához és tánchoz
+látszódjon a teljes alak és a lábfej. Éjszakai, vakuval készült fotón a
+világos arc és sötét háttér a forrás adottsága; a fényerő emelése nem
+pótolja a hiányzó részleteket. A mozgássimítás nem javítja a hibás arcot,
+kezet vagy testtartást. A Grok-minta minőségét ez a változat sem garantálja.
+
+A korábbi hangkezelés megmaradt:
+- Háttérzene saját hangfájlból, 0–100% hangerővel, alapból 12%-on.
+  A rövid zene ismétlődik, a hosszú a videó végén lezárul, fokozatos
+  felhangosítással és lehalkítással. Angol narrációval együtt is szólhat.
+- Zene cseréje kész videón…: a megőrzött hangalapból új zenés változat
+  készül AI-generálás nélkül, a videó képkockáinak változatlan másolásával.
+  Üres zenefájllal a hozzáadott háttérzene eltávolítható. Az eredeti videó
+  megmarad. Ehhez őrizd meg a teljes eredménymappát a hang_alap résszel.
+- Saját videók eredeti hangereje külön szabályozható. A teljes kliphossz
+  megtartása alapból bekapcsolt; új narráció esetén a beszéd adja a hosszt.
+  Az eredeti hangsáv késleltetése a zenecserénél is megmarad.
+
+A program továbbra is előre ellenőrzi a forrásfájlokat, megőrzi a köztes
+AI-jeleneteket, angol narrációt használ, és nem tölt fel automatikusan
+a YouTube-ra. A meleg grafit–borostyán magyar kezelőfelület megmaradt.

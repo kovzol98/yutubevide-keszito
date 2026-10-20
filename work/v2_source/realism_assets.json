@@ -1,0 +1,23 @@
+[
+  {
+    "name": "wan2.2_i2v_A14b_high_noise_lightx2v_4step_720p_260412-Q4_K_M.gguf",
+    "path": "models/diffusion_models/wan2.2_i2v_A14b_high_noise_lightx2v_4step_720p_260412-Q4_K_M.gguf",
+    "url": "https://huggingface.co/Abiray/Wan2.2-LightX2V-260412-4STEP-GGUF/resolve/907bf4a2f422543d344982afb51ff6d14255c8d2/high_noise_260412/wan2.2_i2v_A14b_high_noise_lightx2v_4step_720p_260412-Q4_K_M.gguf",
+    "size": 9661569699,
+    "sha256": "93b4308a129e1d4b6705bc324d1ccb489373d02de7d7e34577f6dcf50b0c4238"
+  },
+  {
+    "name": "wan2.2_i2v_A14b_low_noise_lightx2v_4step_720p_260412-Q4_K_M.gguf",
+    "path": "models/diffusion_models/wan2.2_i2v_A14b_low_noise_lightx2v_4step_720p_260412-Q4_K_M.gguf",
+    "url": "https://huggingface.co/Abiray/Wan2.2-LightX2V-260412-4STEP-GGUF/resolve/907bf4a2f422543d344982afb51ff6d14255c8d2/low_noise_260412/wan2.2_i2v_A14b_low_noise_lightx2v_4step_720p_260412-Q4_K_M.gguf",
+    "size": 9661569699,
+    "sha256": "51de4912be4772b5949b34391c3c4835da7d0270ef8a8e48805613af97167457"
+  },
+  {
+    "name": "wan_2.1_vae.safetensors",
+    "path": "models/vae/wan_2.1_vae.safetensors",
+    "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/vae/wan_2.1_vae.safetensors",
+    "size": 253815318,
+    "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b"
+  }
+]

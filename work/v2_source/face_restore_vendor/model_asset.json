@@ -1,0 +1,7 @@
+{
+  "name": "GFPGAN 1.4 face restoration",
+  "url": "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth",
+  "path": "portrait/models/GFPGANv1.4.pth",
+  "size": 348632874,
+  "sha256": "e2cd4703ab14f4d01fd1383a8a8b266f9a5833dacee8e6a79d3bf21a1b6be5ad"
+}

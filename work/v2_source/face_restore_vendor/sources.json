@@ -1,0 +1,30 @@
+{
+  "repository": "TencentARC/GFPGAN",
+  "revision": "7552a7791caad982045a7bbe5634bbf1cd5c8679",
+  "assets": [
+    {
+      "name": "GFPGANv1.2.pth",
+      "size": 348632874,
+      "browser_download_url": "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.2.pth",
+      "digest": null
+    },
+    {
+      "name": "GFPGANv1.3.pth",
+      "size": 348632874,
+      "browser_download_url": "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth",
+      "digest": null
+    },
+    {
+      "name": "GFPGANv1.4.pth",
+      "size": 348632874,
+      "browser_download_url": "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth",
+      "digest": null
+    },
+    {
+      "name": "RestoreFormer.pth",
+      "size": 290785322,
+      "browser_download_url": "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/RestoreFormer.pth",
+      "digest": null
+    }
+  ]
+}
