@@ -26,7 +26,7 @@ A 16. javítástól az Élethű motor hosszabb jelenetei kisebb, egymás utáni 
 
 A kisebb egyszeri terhelés óvatos programkorlát, nem garancia egy adott illesztőprogram stabilitására. A részek külön betöltése időt kérhet. A pontos méret, képkockaszám és részterv a jelenet naplójában és `reszterv.json` fájljában látható.
 
-A saját helyi motor darabolt GPU-s figyelemszámítással, szinkron memóriaátadással és laprögzített memória nélkül indul. A szövegmodell, valamint a fotó és a kész képkockák VAE-feldolgozása CPU-n történik; az animációs modell továbbra is a videókártyát használja. A szövegmodell így a kezdeti betöltésétől a számítás végéig CPU-n marad, GPU-s GGUF-kibontás nélkül. Ez időt kérhet, de csökkenti az egyszerre végzett GPU-műveletek körét. A program más felhasználó meglévő ComfyUI-folyamatát nem állítja át.
+A saját helyi motor darabolt GPU-s figyelemszámítással, szinkron memóriaátadással és laprögzített memória nélkül indul. A szövegmodell CPU-n marad a kezdeti betöltésétől a számítás végéig, GPU-s GGUF-kibontás nélkül. Az animáció és a képkockák VAE-feldolgozása a videókártyán fut. A teljesen CPU-s képfeldolgozás túl nagy lassulást okozott a próbában, ezért azt a kiadás nem kényszeríti. A szöveg CPU-s feldolgozása önmagában is több percet kérhet. A program más felhasználó meglévő ComfyUI-folyamatát nem állítja át.
 
 Az AMD PyTorch/ROCm 7.2.1 Windows-csomagjához az AMD **Windows 11** rendszert sorol támogatottnak. Windows 10 alatt a GPU-stabilitás nem igazolt. A program ezt a rendszerkorlátot nem tudja megszüntetni; nem állítja át az illesztőprogramot vagy a Windows védelmeit. [AMD kompatibilitás és kiadási megjegyzések](https://www.amd.com/en/resources/support-articles/release-notes/RN-AMDGPU-WINDOWS-PYTORCH-7-2-1.html)
 

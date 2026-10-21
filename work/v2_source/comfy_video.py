@@ -246,7 +246,7 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
     command = [str(portable / "python_embeded/python.exe"), "-s", str(portable / "ComfyUI/main.py"),
                "--windows-standalone-build", "--listen", "127.0.0.1", "--port", str(port),
                "--use-split-cross-attention", "--disable-async-offload", "--disable-pinned-memory",
-               "--cpu-vae", "--extra-model-paths-config", str(yaml)]
+               "--extra-model-paths-config", str(yaml)]
     try:
         process = subprocess.Popen(command, cwd=str(portable), stdout=handle, stderr=subprocess.STDOUT,
                                    stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -256,7 +256,7 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
     engine._comfy_process, engine._comfy_log_handle = process, handle
     engine._comfy_url, engine._comfy_root = base, str(root)
     engine._comfy_server_log = log_path
-    engine.log("A helyi AI-videómotor indul: kisebb GPU-műveletek, szinkron memóriaátadás; a képfeldolgozás CPU-val készül…")
+    engine.log("A helyi AI-videómotor indul: a szöveg CPU-n, az animáció és a képfeldolgozás GPU-val készül…")
     started, last_report = time.monotonic(), 0.0
     try:
         while time.monotonic() - started < 180:

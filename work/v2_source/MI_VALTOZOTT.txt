@@ -10,8 +10,8 @@ A kért hossz megmarad; nincs visszaismételt klip. Az átmenetnél a
 mozgás változhat, tökéletes folytonosságot vagy arcot nem garantál.
 
 Új GPU-indítási mód: darabolt figyelemszámítás, szinkron adatmozgatás,
-laprögzített memória nélkül. A szövegmodell, a fotó- és képkockafeldolgozás CPU-n fut;
-a mozgás számítását továbbra is a GPU végzi. Ez lassíthatja a feldolgozást.
+laprögzített memória nélkül. A szövegmodell CPU-n fut; az animációt és a
+képkockák feldolgozását a GPU végzi. A CPU-s szövegfeldolgozás is több perc lehet.
 A rendszer és az illesztőprogram beállításain nem változtat.
 Az AMD ROCm/PyTorch 7.2.1 Windows-csomag hivatalosan Windows 11-et
 támogat. Windows 10-en a GPU-stabilitás nem igazolt.
