@@ -1,7 +1,24 @@
-YouTube Műhely 2 – GPU-hibakezelés és kisebb számítási feladatok
-Változat: 2026.10.21-gpu-v16
+YouTube Műhely 2 – Helyi AI-motor indításának javítása
+Változat: 2026.10.21-startup-v17
 
-A fejlécben a 16. javítás látható.
+A fejlécben a 17. javítás látható.
+A csomagolt Windows-program helyi kapcsolati hibájának javítása:
+a régi EXE a már futó motort sem érte el, mert a kapcsolódás előtt
+hibázott. Emiatt három perc után téves indítási hibát jelzett.
+A helyi HTTP-kapcsolat külön útvonalat kapott, amely nem indítja el
+az internetes HTTPS-kapcsolat szükségtelen előkészítését.
+A csomag hiányzó hálózati biztonsági adatfájlja is bekerült;
+a tanúsítvány-ellenőrzés megmarad.
+A motor készenlétét a helyi munkasor válasza igazolja, GPU-adatok
+lekérdezése és videógenerálás nélkül. A helyi kapcsolat közvetlen;
+a rendszer internetes proxybeállítását ehhez nem használja.
+Az indítás legfeljebb három percet vár. Sikertelen indításnál a
+hibaüzenet részletesebb, az aktuális indítás naplórészletével.
+A régebbi sikeres motorindítás naplója nem keveredik az új hibával.
+A nagy modelleket nem kell emiatt újra letölteni.
+
+A 16. javítás GPU-védelmei és kisebb számítási feladatai megmaradtak:
+
 Új projektnél Normál a részletesség; betöltéskor a mentett érték marad.
 Az Élethű motor a hosszabb jeleneteket kisebb feladatokban készíti:
 Részletes legfeljebb 33, Normál 49 natív képkocka feladatonként.

@@ -171,7 +171,7 @@ class ComfyRequestTransportTests(unittest.TestCase):
         response = MagicMock()
         response.__enter__.return_value = response
         response.read.return_value = b'{}'
-        with patch.object(comfy_video.urllib.request, 'urlopen', return_value=response) as opening:
+        with patch.object(comfy_video, '_local_open', return_value=response) as opening:
             self.assertEqual(comfy_video._request(self.base, '/free', FREE_PAYLOAD, timeout=1.75), {})
         request = opening.call_args.args[0]
         self.assertEqual(opening.call_args.kwargs, {'timeout': 1.75})
@@ -183,14 +183,14 @@ class ComfyRequestTransportTests(unittest.TestCase):
         response = MagicMock()
         response.__enter__.return_value = response
         response.read.return_value = b'{}'
-        with patch.object(comfy_video.urllib.request, 'urlopen', return_value=response) as opening:
+        with patch.object(comfy_video, '_local_open', return_value=response) as opening:
             comfy_video._request(self.base, '/queue')
         self.assertEqual(opening.call_args.kwargs, {'timeout': 15})
 
     def test_timeout_cancelled_and_oserror_propagate_unchanged(self):
         for error in (TimeoutError('fixture timeout'), Cancelled(), OSError('fixture I/O failure')):
             with self.subTest(error=type(error).__name__):
-                with patch.object(comfy_video.urllib.request, 'urlopen', side_effect=error):
+                with patch.object(comfy_video, '_local_open', side_effect=error):
                     with self.assertRaises(type(error)) as caught:
                         comfy_video._request(self.base, '/free', FREE_PAYLOAD, timeout=0.25)
                 self.assertIs(caught.exception, error)

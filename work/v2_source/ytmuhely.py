@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 if __name__=='__main__':sys.modules.setdefault('ytmuhely',sys.modules[__name__])
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
-APP_RELEASE = '2026.10.21 • 16. javítás'
+APP_RELEASE = '2026.10.21 • 17. javítás'
 class Cancelled(Exception): pass
 
 def queue_file():
@@ -1756,7 +1756,17 @@ def gui():
 
 
 if __name__=='__main__':
-    if len(sys.argv)>1 and sys.argv[1]=='--tts':
+    if len(sys.argv)>1 and sys.argv[1]=='--motor-check':
+        try:
+            from motor_diagnostic import diagnose
+            result=diagnose(sys.argv[2])
+            if result['status']!='PASS':sys.exit(1)
+        except Exception as error:
+            from motor_diagnostic import _safe_text
+            Path(sys.argv[2]).with_suffix('.error.txt').write_text(
+                type(error).__name__+': '+_safe_text(error),encoding='utf-8')
+            sys.exit(1)
+    elif len(sys.argv)>1 and sys.argv[1]=='--tts':
         import edge_tts
         try: asyncio.run(edge_tts.Communicate(Path(sys.argv[2]).read_text(encoding='utf-8'),sys.argv[4]).save(sys.argv[3]))
         except Exception:

@@ -379,7 +379,7 @@ class GenerateRetryIntegrationTests(WorkspaceFixture):
             stack.enter_context(patch.object(comfy_video, '_ensure_server', self.ensure_server))
             stack.enter_context(patch.object(comfy_video, '_request', self.request))
             stack.enter_context(patch.object(comfy_video, '_upload_image', return_value=self.reference))
-            stack.enter_context(patch.object(comfy_video.urllib.request, 'urlopen', self.download))
+            stack.enter_context(patch.object(comfy_video, '_local_open', self.download))
             stack.enter_context(patch('comfy_progress.JobProgress', side_effect=self.progress))
             stack.enter_context(patch('imageio_ffmpeg.get_ffmpeg_exe', return_value='ffmpeg-fixture'))
             stack.enter_context(patch.object(self.engine, 'run', side_effect=self.encode))

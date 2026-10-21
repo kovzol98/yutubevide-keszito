@@ -72,12 +72,45 @@ def engine_files(root):
     return portable / "python_embeded/python.exe", models
 
 
+class _NoLocalRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, new_url):
+        raise urllib.error.HTTPError(request.full_url, code,
+            'A helyi AI-kapcsolat nem követ átirányítást.', headers, response)
+
+
+def _local_open(request, *, timeout):
+    """A helyi motor forgalma nem kerülhet internetes proxyhoz."""
+    url = request.full_url if isinstance(request, urllib.request.Request) else request
+    parsed = urllib.parse.urlsplit(url)
+    if (parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost', '::1')
+            or parsed.username is not None or parsed.password is not None or parsed.fragment):
+        raise ValueError('Az AI-motor címe csak hitelesítés nélküli helyi HTTP-kapcsolat lehet.')
+    if parsed.port is not None and not 1 <= parsed.port <= 65535:
+        raise ValueError('Az AI-motor helyi portja érvénytelen.')
+    try:seconds = float(timeout)
+    except (ValueError, TypeError, OverflowError):
+        raise ValueError('A helyi kapcsolat időkorlátja pozitív véges szám legyen.') from None
+    if isinstance(timeout, bool) or not math.isfinite(seconds) or seconds <= 0:
+        raise ValueError('A helyi kapcsolat időkorlátja pozitív véges szám legyen.')
+    # Nincs globális opener-módosítás: a modellletöltés és az internetes hang
+    # továbbra is a saját hálózati beállításait használja.
+    # A build_opener() HTTP-címhez is létrehoz HTTPS-kezelőt. A fagyasztott
+    # Windows-kiadásban a tanúsítványkörnyezet hiánya már a helyi kérés előtt
+    # FileNotFoundError hibát okozhat. Itt kizárólag HTTP-kezelők szükségesek.
+    opener = urllib.request.OpenerDirector()
+    for handler in (urllib.request.HTTPHandler(), urllib.request.HTTPDefaultErrorHandler(),
+                    _NoLocalRedirect(), urllib.request.HTTPErrorProcessor(),
+                    urllib.request.UnknownHandler()):
+        opener.add_handler(handler)
+    return opener.open(request, timeout=seconds)
+
+
 def _request(base, route, payload=None, timeout=15):
     request = urllib.request.Request(base + route,
         data=None if payload is None else json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"} if payload is not None else {})
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with _local_open(request, timeout=timeout) as response:
             body = response.read()
             # ComfyUI's /free acknowledges its flags with an empty HTTP 200.
             # Queue and history responses still require valid JSON.
@@ -108,12 +141,33 @@ def _queue_prompt_ids(queue):
     return tuple(groups)
 
 
-def _probe(base):
+def _connection_error(error):
+    # A diagnosztikában sem jelenhet meg proxycímbe ágyazott jelszó.
+    return re.sub(r'(?i)\b(?:https?|socks5h?)://[^\s<>"\']+', '[kapcsolat]', str(error))[-1000:]
+
+
+def _probe(base, diagnostics=None):
     try:
-        result = _request(base, "/system_stats", timeout=2)
-        return isinstance(result, dict) and "system" in result
-    except (OSError, ValueError, RuntimeError):
+        # A készenléti ellenőrzéshez nem kell GPU-memóriát lekérdezni.
+        result = _request(base, "/queue", timeout=2)
+        _queue_prompt_ids(result)
+        if diagnostics is not None:
+            diagnostics.update(ready=True, error_type='', error='')
+        return True
+    except (OSError, ValueError, RuntimeError) as error:
+        if diagnostics is not None:
+            diagnostics.update(ready=False, error_type=type(error).__name__, error=_connection_error(error))
         return False
+
+
+def _startup_tail(path, offset):
+    try:
+        with path.open('rb') as stream:
+            stream.seek(0, 2)
+            stream.seek(max(offset, stream.tell()-5000))
+            return stream.read().decode('utf-8', errors='replace')[-3500:]
+    except OSError:
+        return ''
 
 
 def _compatible_server(base, model_names=None, required_extra=()):
@@ -243,6 +297,8 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
     base = "http://127.0.0.1:%d" % port
     log_path = root / "comfy_motor.log"
     handle = log_path.open("ab", buffering=0)
+    log_offset = handle.tell()
+    handle.write(('\n=== YouTube Muhely motorinditas %s ===\n' % uuid.uuid4().hex).encode('ascii'))
     command = [str(portable / "python_embeded/python.exe"), "-s", str(portable / "ComfyUI/main.py"),
                "--windows-standalone-build", "--listen", "127.0.0.1", "--port", str(port),
                "--use-split-cross-attention", "--disable-async-offload", "--disable-pinned-memory",
@@ -256,23 +312,34 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
     engine._comfy_process, engine._comfy_log_handle = process, handle
     engine._comfy_url, engine._comfy_root = base, str(root)
     engine._comfy_server_log = log_path
+    diagnostics = dict(ready=False, error_type='', error='', log_offset=log_offset,
+                       log_path=str(log_path), process_id=process.pid)
+    engine._comfy_startup_diagnostics = diagnostics
     engine.log("A helyi AI-videómotor indul: a szöveg CPU-n, az animáció és a képfeldolgozás GPU-val készül…")
     started, last_report = time.monotonic(), 0.0
     try:
         while time.monotonic() - started < 180:
             engine.check()
             if process.poll() is not None:
-                tail = log_path.read_text(encoding="utf-8", errors="replace")[-3500:]
+                diagnostics['process_exited'] = True
+                tail = _startup_tail(log_path, log_offset)
                 raise RuntimeError("A helyi AI-videómotor nem indult el.\n" + tail)
-            if _probe(base):
+            if _probe(base, diagnostics=diagnostics):
+                diagnostics['elapsed_seconds'] = time.monotonic()-started
                 return base
             if time.monotonic() - last_report > 20:
                 engine.log("Az AI-motor betöltése folyamatban…")
                 last_report = time.monotonic()
             time.sleep(0.3)
-        raise RuntimeError("Az AI-motor három percen belül nem indult el. Részletek: " + str(log_path))
+        diagnostics.update(process_exited=False, elapsed_seconds=time.monotonic()-started)
+        raise RuntimeError('Az AI-motor folyamata fut, de három percen belül nem sikerült '
+            'a helyi kapcsolat ellenőrzése.\nUtolsó kapcsolathiba: '
+            + diagnostics['error_type'] + ': ' + diagnostics['error']
+            + '\nAz aktuális indítás naplója: ' + str(log_path)
+            + '\n' + _startup_tail(log_path, log_offset))
     except BaseException:
-        cleanup(engine)
+        try:cleanup(engine)
+        except BaseException as error:_cleanup_log(engine.log, 'Az indítás utáni takarítás', error)
         raise
 
 
@@ -289,7 +356,7 @@ def _upload_image(base, image: Path):
     segments.append(("\r\n--%s--\r\n" % boundary).encode())
     request = urllib.request.Request(base + "/upload/image", data=b"".join(segments),
                                      headers={"Content-Type": "multipart/form-data; boundary=" + boundary})
-    with urllib.request.urlopen(request, timeout=30) as response:
+    with _local_open(request, timeout=30) as response:
         uploaded = json.load(response)
     return "/".join(part for part in (uploaded.get("subfolder", ""), uploaded["name"]) if part)
 
@@ -569,7 +636,7 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None, sce
                                            "type": frame.get("type", "output")})
             destination = frame_folder / ("frame_%05d.png" % number)
             temporary = destination.with_suffix(".part")
-            with urllib.request.urlopen(base + "/view?" + query, timeout=30) as response:
+            with _local_open(base + "/view?" + query, timeout=30) as response:
                 with temporary.open("wb") as stream:
                     while True:
                         engine.check()

@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+import ssl
 from PyInstaller.utils.hooks import collect_all
 
 SOURCE = Path(SPECPATH).resolve() / 'v2_source'
@@ -11,6 +12,9 @@ for name in ('portrait_assets.json', 'liveportrait_worker.py', 'portrait_detail.
     datas.append((str(SOURCE / name), '.'))
 binaries = []
 hiddenimports = []
+ssl_policy = Path(ssl.__file__).with_name('codex-rejected-cas.pem')
+if ssl_policy.is_file():
+    datas.append((str(ssl_policy), '.'))
 for package in ('imageio_ffmpeg', 'edge_tts'):
     package_data, package_binaries, package_imports = collect_all(package)
     datas += package_data

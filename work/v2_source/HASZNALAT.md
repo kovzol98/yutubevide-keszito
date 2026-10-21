@@ -1,6 +1,6 @@
 # YouTube Műhely 2 – fotóból mozgó jelenet
 
-Változat: `2026.10.21-gpu-v16` · 16. javítás
+Változat: `2026.10.21-startup-v17` · 17. javítás
 
 Magyar Windows-program, angol narrációval és hozzáadható háttérzenével. Szövegből vagy fotóból mozgó jeleneteket készít, majd feltölthető MP4-videóvá állítja össze őket. Alapból helyben számol; külön választható, fizetős Grok internetes kapcsolat is van. A kezelőfelület meleg grafit, krém és borostyán színű.
 
@@ -19,6 +19,16 @@ A fő videóbeállítások a szélesebb **bal oldalon** találhatók: kép és f
 Ezen a gépen a motor már telepítve van. Ha a program más helyre kerül, az **AI-motor és erőforrások** résznél válaszd ki az `AI_Motor` mappát. A mellékelt `AI_MOTOR_HELYE.txt` az itteni motor helyét tartalmazza.
 
 A készítés indításakor a program minden felhasznált fotó és videó olvashatóságát ellenőrzi, még az első jelenet elkészítése vagy AI-generálása előtt. A hiányzó vagy sérült forrást előbb cseréld ki.
+
+## A helyi AI-motor indítása
+
+A 17. javítás a csomagolt Windows-program helyi kapcsolati hibáját javítja. Az ellenőrzéskor a motor már futott és válaszolt, de a régi EXE a kapcsolat létrehozása előtt hibázott, majd három perc után sikertelen indítást jelzett. A helyi HTTP-kapcsolat most külön, közvetlen útvonalat használ; az internetes HTTPS-kapcsolat előkészítését ehhez nem indítja el, és a rendszer internetes proxybeállítását sem használja. A csomag hiányzó hálózati biztonsági adatfájlja is bekerült; a tanúsítvány-ellenőrzés megmarad.
+
+A motor elérhetőségét a helyi munkasor válasza igazolja. Ez nem kér videókártya-adatokat, és nem indít generálást. A videókészítéshez a program továbbra is megvárja az indítás befejezését.
+
+Az indítási várakozás legfeljebb három perc. Ha a motor kilép vagy nem válaszol időben, a hibaüzenet megkülönbözteti az indítás és a kapcsolat hibáját, és megadja a napló helyét. A részletek az aktuális indításhoz tartoznak, így egy régebbi sikeres futás nem rejti el az új hibát.
+
+A javításhoz a nagy modelleket nem kell újra letölteni. A motor indulásának ellenőrzése nem gyorsítja az AI-jelenetek számítását; az alábbi GPU- és képkockaellenőrzések továbbra is működnek.
 
 ## GPU-hiba és hosszabb helyi jelenetek
 
