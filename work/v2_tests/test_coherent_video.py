@@ -52,6 +52,25 @@ class DecoderTests(unittest.TestCase):
                         self.assertEqual(fields[name][0],output)
 
 class WholeSceneTests(unittest.TestCase):
+    @staticmethod
+    def prepared_photo(config):
+        picture=app.Image.new('RGB',(48,64),(45,70,95))
+        picture.paste((185,145,85),(12,16,36,48))
+        picture.save(config['output'])
+
+    @staticmethod
+    def native_fixture(work,duration,kwargs):
+        scene=Path(kwargs['scene_dir']);frames=scene/'frames'
+        frames.mkdir(parents=True,exist_ok=True)
+        canvas=tuple(kwargs['canvas']);count=round(duration*16)
+        for number in range(count):
+            picture=app.Image.new('RGB',canvas,(number,60,80))
+            picture.paste((190,150,90),(canvas[0]//4,canvas[1]//4,canvas[0]*3//4,canvas[1]*3//4))
+            picture.save(frames/('frame_%05d.png'%number))
+        (scene/'video_settings.json').write_text(json.dumps({'width':canvas[0],
+            'height':canvas[1],'fps':16,'frames':count,'decoder':'VAEDecode'}))
+        return scene/'video.mp4'
+
     def test_cache_cleanup_failure_does_not_discard_a_completed_native_scene(self):
         for failure in (OSError('Server closed after generation'),RuntimeError('Queue unavailable')):
             with self.subTest(error=type(failure).__name__):
@@ -65,19 +84,14 @@ class WholeSceneTests(unittest.TestCase):
                     project=app.Project(ai_root=str(base))
                     def source_worker(engine,portrait,config,scene,*args):
                         self.assertEqual(config['action'],'prepare')
-                        Path(config['output']).write_bytes(b'prepared source')
+                        self.prepared_photo(config)
                         return {'face_found':True}
                     def native(engine,project,text,image,index,work,duration,**kwargs):
-                        scene=work.parent/'AI_jelenetek/jelenet_001';frames=scene/'frames'
-                        frames.mkdir(exist_ok=True)
-                        for index in range(81):
-                            app.Image.new('RGB',(8,8),(index,60,80)).save(frames/('frame_%05d.png'%index))
-                        (scene/'video_settings.json').write_text(json.dumps({'fps':16,'frames':81,'decoder':'VAEDecode'}))
-                        return scene/'video.mp4'
+                        return self.native_fixture(work,duration,kwargs)
                     def smooth(engine,root,frames,fps,scene,*,force_cpu=False):
                         self.assertTrue(force_cpu)
                         self.assertEqual(frames,scene/'frames')
-                        self.assertEqual(len(list(frames.glob('frame_*.png'))),81)
+                        self.assertEqual(len(list(frames.glob('frame_*.png'))),80)
                         self.assertEqual(fps,16)
                         result=scene/'final.mp4';result.write_bytes(b'completed interpolation')
                         return result
@@ -87,7 +101,7 @@ class WholeSceneTests(unittest.TestCase):
                     request.assert_called_once_with(engine._comfy_url,'/queue',timeout=5)
                     interpolation.assert_called_once()
                     metadata=json.loads((result.parent/'mozgas_egyseg.json').read_text(encoding='utf-8'))
-                    self.assertEqual(metadata['native_frames'],81)
+                    self.assertEqual(metadata['native_frames'],80)
                     self.assertFalse(metadata['head_replacement']);self.assertFalse(metadata['static_background'])
                     self.assertTrue(any('CPU-val folytatódik' in line for line in logs))
                 finally:
@@ -97,26 +111,27 @@ class WholeSceneTests(unittest.TestCase):
         base=ROOT/'work/coherent_tests'/uuid.uuid4().hex
         base.mkdir(parents=True)
         try:
-            work=base/'ideiglenes';work.mkdir();calls=[]
+            work=base/'ideiglenes';work.mkdir();calls=[];originals=[]
             def source_worker(engine,portrait,config,scene,*args):
-                calls.append(config['action']);Path(config['output']).write_bytes(b'prepared')
+                calls.append(config['action']);self.prepared_photo(config)
                 return {'face_found':True}
             def native(engine,project,text,image,index,work,duration,**kwargs):
-                scene=work.parent/'AI_jelenetek/jelenet_001';(scene/'frames').mkdir(exist_ok=True)
-                (scene/'frames/frame_00000.png').write_bytes(b'original native pixels')
-                (scene/'video_settings.json').write_text(json.dumps({'fps':16,'frames':81,'decoder':'VAEDecode'}))
-                return scene/'video.mp4'
+                result=self.native_fixture(work,duration,kwargs)
+                originals.extend(path.read_bytes() for path in sorted((result.parent/'frames').glob('frame_*.png')))
+                return result
             def smooth(engine,root,frames,fps,scene,*,force_cpu=False):
                 self.assertTrue(force_cpu)
                 self.assertEqual(frames,scene/'frames')
-                self.assertEqual((frames/'frame_00000.png').read_bytes(),b'original native pixels')
+                self.assertEqual((frames/'frame_00000.png').read_bytes(),originals[0])
+                self.assertTrue(all(path.read_bytes() in originals for path in frames.glob('frame_*.png')))
+                self.assertEqual(len(list(frames.glob('frame_*.png'))),80)
                 self.assertEqual(fps,16);return scene/'final.mp4'
             with patch.object(realistic_video,'engine_files',return_value=base),patch.object(realistic_video,'_worker',source_worker),patch.object(comfy_video,'generate',native),patch('motion_smooth.generate',smooth):
                 result=realistic_video.generate(app.Engine(),app.Project(ai_root=str(base)),'','photo.jpg',0,work,5)
             self.assertEqual(calls,['prepare'])
             metadata=json.loads((result.parent/'mozgas_egyseg.json').read_text(encoding='utf-8'))
             self.assertFalse(metadata['head_replacement']);self.assertFalse(metadata['static_background'])
-            self.assertEqual(metadata['native_frames'],81)
+            self.assertEqual(metadata['native_frames'],80)
         finally:
             assert base.resolve().is_relative_to((ROOT/'work/coherent_tests').resolve())
             shutil.rmtree(base)

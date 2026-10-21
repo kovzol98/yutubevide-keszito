@@ -292,8 +292,7 @@ class GenerateRetryIntegrationTests(WorkspaceFixture):
         self.work = self.base / 'ideiglenes'; self.work.mkdir()
         self.source = self.base / 'source.png'
         Image.new('RGB', (48, 64), (155, 120, 90)).save(self.source)
-        png = io.BytesIO(); Image.new('RGB', (8, 8), (120, 80, 50)).save(png, format='PNG')
-        self.png = png.getvalue()
+        self.png = None
         self.engine = app.Engine()
         self.process = Mock(); self.process.poll.return_value = None
         self.process.wait.return_value = 0
@@ -320,6 +319,9 @@ class GenerateRetryIntegrationTests(WorkspaceFixture):
             graph = payload['prompt']; self.submitted.append(copy.deepcopy(graph))
             self.assertLessEqual(len(self.submitted), 2, 'A third prompt must never be submitted')
             if len(self.submitted) == 1:
+                size = (graph['8']['inputs']['width'], graph['8']['inputs']['height'])
+                png = io.BytesIO(); Image.new('RGB', size, (120, 80, 50)).save(png, format='PNG')
+                self.png = png.getvalue()
                 prefix = graph['15']['inputs']['filename_prefix'].removesuffix('_latent')
                 self.first_error = failed_history('original', graph, prefix)
                 self.saved = self.portable / 'ComfyUI/output/YouTubeMuhely' / self.first_error['outputs']['15']['latents'][0]['filename']
@@ -473,6 +475,36 @@ class GenerateRetryIntegrationTests(WorkspaceFixture):
         self.assertFalse((scene / 'video.partial.mp4').exists())
         self.assertEqual(self.deletions, ['retry'])
         self.assertTrue(self.saved.is_file())
+
+    def test_detailed_reference_with_uniform_decode_never_publishes_or_encodes(self):
+        source = Image.new('RGB', (48, 64), 'black')
+        source.paste('white', (0, 0, 24, 64)); source.save(self.source)
+        scene = self.base / 'AI_jelenetek/jelenet_001'
+        previous = scene / 'frames'; previous.mkdir(parents=True)
+        old = previous / 'frame_00000.png'; old.write_bytes(b'previous completed frame')
+        with self.assertRaisesRegex(RuntimeError, 'egyszínű képkockákat'):
+            self.generate()
+        self.assertEqual(old.read_bytes(), b'previous completed frame')
+        self.assertEqual(self.encodes, [])
+        self.assertFalse((scene / 'video.mp4').exists())
+        pending = list(scene.glob('frames.pending_*'))
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(len(list(pending[0].glob('*.png'))), 5)
+        self.assertTrue(self.saved.is_file(), 'The checkpoint must survive an invalid decode')
+        report = json.loads((scene / 'frame_integrity.json').read_text(encoding='utf-8'))
+        self.assertEqual(report['status'], 'failed')
+        self.assertEqual(report['reason'], 'uniform_output_from_detailed_reference')
+        recovery = json.loads((scene / 'decode_retry.json').read_text(encoding='utf-8'))
+        self.assertFalse(recovery['frames_published'])
+        self.assertFalse(recovery['encoded']); self.assertFalse(recovery['completed'])
+
+    def test_successful_decode_records_checked_frame_integrity(self):
+        video = self.generate()
+        report = json.loads((video.parent / 'frame_integrity.json').read_text(encoding='utf-8'))
+        self.assertEqual(report['status'], 'passed')
+        self.assertEqual(report['checked_frames'], 5)
+        with Image.open(video.parent / 'frames/frame_00000.png') as frame:
+            self.assertEqual(report['expected_size'], list(frame.size))
 
 
 if __name__ == '__main__': unittest.main(verbosity=2)

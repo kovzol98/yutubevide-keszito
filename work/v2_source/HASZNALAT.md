@@ -1,6 +1,6 @@
 # YouTube Műhely 2 – fotóból mozgó jelenet
 
-Változat: `2026.10.21-layout-v15` · 15. javítás
+Változat: `2026.10.21-gpu-v16` · 16. javítás
 
 Magyar Windows-program, angol narrációval és hozzáadható háttérzenével. Szövegből vagy fotóból mozgó jeleneteket készít, majd feltölthető MP4-videóvá állítja össze őket. Alapból helyben számol; külön választható, fizetős Grok internetes kapcsolat is van. A kezelőfelület meleg grafit, krém és borostyán színű.
 
@@ -10,7 +10,7 @@ A fő videóbeállítások a szélesebb **bal oldalon** találhatók: kép és f
 
 1. Csomagold ki a teljes ZIP-et, majd indítsd a `YouTubeMuhely2.exe` fájlt. Az `_internal` és `hangmotor` mappák maradjanak mellette.
 2. A **Videó forrása** legyen **AI-videó • helyi**. Adj hozzá egy fotót, és írd le angolul, mi történjen rajta. A **Kar- és testmozgás**, **Séta** vagy **Tánc** gomb egy átírható angol mintát illeszt a leírás helyére.
-3. A **Fotóanimáció minősége** legyen **Élethű • arc és fény**. Új projektnél a részletesség **Részletes – jobb AI-részletesség, több idő**; a betöltött projektek megőrzik a mentett értéküket. Első próbához 2–3 másodperces jelenetet használj. A részletes számítás ilyen rövid jelenetnél is több tíz percig tarthat.
+3. A **Fotóanimáció minősége** legyen **Élethű • arc és fény**. Új projektnél a részletesség **Normál – kisebb AI-részletesség**; a betöltött projektek megőrzik a mentett értéküket. Első próbához 2 másodperces jelenetet használj. A részletes számítás rövid jelenetnél is hosszú lehet.
 4. Természetes fotóhoz válaszd az **Eredeti világítás** és **Finom képjavítás** beállításokat. Az **AI-arcjavítás** alapból kikapcsolt: így a program nem rajzolja át előre a forrás arcát. Ezt csak külön igény esetén kapcsold be, mert bizonytalan szem- vagy szemüvegrészleteket is megváltoztathat.
 5. A narrációhoz írj angol szöveget. Az **Angol női LJ • offline** hang a csomag része; internet nélkül is működik. Narráció nélkül hagyd üresen a szöveget, vagy válaszd a **Nincs narráció** beállítást.
 6. Ha zenét szeretnél, a **Háttérzene** résznél válassz egy hangfájlt, és állítsd be a hangerejét.
@@ -19,6 +19,22 @@ A fő videóbeállítások a szélesebb **bal oldalon** találhatók: kép és f
 Ezen a gépen a motor már telepítve van. Ha a program más helyre kerül, az **AI-motor és erőforrások** résznél válaszd ki az `AI_Motor` mappát. A mellékelt `AI_MOTOR_HELYE.txt` az itteni motor helyét tartalmazza.
 
 A készítés indításakor a program minden felhasznált fotó és videó olvashatóságát ellenőrzi, még az első jelenet elkészítése vagy AI-generálása előtt. A hiányzó vagy sérült forrást előbb cseréld ki.
+
+## GPU-hiba és hosszabb helyi jelenetek
+
+A 16. javítástól az Élethű motor hosszabb jelenetei kisebb, egymás utáni AI-feladatokban készülnek. Részletes módban egy feladat legfeljebb **33**, Normál módban **49** natív képkockát számol 16 képkocka/mp sebességgel. Egy 10 másodperces részletes jelenet így öt részből áll. A következő rész az előző rész utolsó elfogadott képkockáját használja; az átfedő első képkocka csak egyszer kerül a videóba. A kért videóhossz megmarad, a program nem ismétli vissza a klipet. A határoknál a mozgás vagy a megjelenés változhat; ez nem garantál tökéletes arcot vagy folytonosságot.
+
+A kisebb egyszeri terhelés óvatos programkorlát, nem garancia egy adott illesztőprogram stabilitására. A részek külön betöltése időt kérhet. A pontos méret, képkockaszám és részterv a jelenet naplójában és `reszterv.json` fájljában látható.
+
+A saját helyi motor darabolt GPU-s figyelemszámítással, szinkron memóriaátadással és laprögzített memória nélkül indul. A szövegmodell, valamint a fotó és a kész képkockák VAE-feldolgozása CPU-n történik; az animációs modell továbbra is a videókártyát használja. A szövegmodell így a kezdeti betöltésétől a számítás végéig CPU-n marad, GPU-s GGUF-kibontás nélkül. Ez időt kérhet, de csökkenti az egyszerre végzett GPU-műveletek körét. A program más felhasználó meglévő ComfyUI-folyamatát nem állítja át.
+
+Az AMD PyTorch/ROCm 7.2.1 Windows-csomagjához az AMD **Windows 11** rendszert sorol támogatottnak. Windows 10 alatt a GPU-stabilitás nem igazolt. A program ezt a rendszerkorlátot nem tudja megszüntetni; nem állítja át az illesztőprogramot vagy a Windows védelmeit. [AMD kompatibilitás és kiadási megjegyzések](https://www.amd.com/en/resources/support-articles/release-notes/RN-AMDGPU-WINDOWS-PYTORCH-7-2-1.html)
+
+A motor mindkét számítási szakasz után ellenőrzi a hibás számértékeket. A program minden visszakapott képkockát megnyit és ellenőriz. Ha egy részletgazdag fotóból csak egyszínű szürke vagy fekete képkockák készülnek, nem jelzi kész videónak. A valódi, részletgazdag állókép vagy egy szándékosan egyszínű referencia ettől nem hibás.
+
+Windows alatt a program a generálás idejére figyeli az elérhető Display/4101 illesztőprogram-újraindulási eseményeket. Ilyen hiba, hibás számítás vagy hibás képkockák esetén a munkasor is megáll; a következő videó várakozó marad. A köztes fájlok diagnosztikához megmaradnak. A `gpu_health.json` jelzi, ha a Windows eseménynaplója nem olvasható; a számítás- és képkockaellenőrzés ettől még működik. Újrapróbálás előtt indítsd újra az AI-motort és csökkentsd a részletességet. A régi, már hibás videó utólag ettől nem javul meg.
+
+A kis biztonsági kiegészítőt a program a következő helyi Élethű generálás előtt frissíti a saját motorában. A nagy modelleket emiatt nem kell újra letölteni. A rendszer és a videókártya beállításain nem változtat.
 
 ## Táncmozdulatok a fotón szereplő karakterekhez
 
@@ -42,7 +58,7 @@ A **Munkasor megnyitása…** gomb mutatja az előkészített, futó, kész és 
 
 A munkasor helyi **AI-videó**, **Saját videók** és **Képes diavideó** készítésére használható. Az **Angol női LJ • offline**, saját narrációs hangfájl vagy narráció nélküli beállítás támogatott. **Grok-videót és internetes narrációt nem vesz fel**, és nem indít automatikus fizetős generálást. A helyi AI-hoz szükséges motort és modelleket az éjszakai használat előtt telepítsd és próbáld ki.
 
-A **Leállás a jelenlegi után** gomb a futó videót hagyja befejeződni, majd megáll. A **Jelenlegi megszakítása** a futó videót állítja le, és a következő munkát sem indítja el. A kész eredmények megmaradnak. Egy hibás munka hibajelzést és naplót kap; a program a következő várakozó munkával folytatja a sort.
+A **Leállás a jelenlegi után** gomb a futó videót hagyja befejeződni, majd megáll. A **Jelenlegi megszakítása** a futó videót állítja le, és a következő munkát sem indítja el. A kész eredmények megmaradnak. Egy szokásos bemeneti hiba után a program a következő munkával folytatja a sort. GPU-újraindulás, hibás AI-számítás vagy képkockahiba esetén a sor megáll.
 
 A munkák és állapotuk a gépen tartós mentést kapnak. A munkasor a saját Windows-felhasználódhoz tartozik, így egy új programmappa kicsomagolásától nem tűnik el. A program újraindítása után a félbeszakadt munka nem indul el magától: kijelölés után az **Újrapróbálás** gombbal ismét várakozóvá teheted, majd indítsd el a sort. Ez a teljes videó újrakezdése, nem a félbeszakadt AI-számítás folytatása. Ha a félkész eredménymappában már vannak kész jelenetek és `folytatas.json`, azokat külön a **04 Jelenetek és javítás → Megszakadt helyi munka folytatása…** gombbal hasznosíthatod újra.
 

@@ -28,11 +28,22 @@ class FaceChoiceTests(unittest.TestCase):
                     with self.subTest(face_restore=face_restore,enhancement=enhancement):
                         project=app.Project(face_restore=face_restore,enhancement=enhancement,ai_root=str(folder))
                         engine=app.Engine()
+                        def prepare(engine,portrait,config,scene,*args):
+                            picture=app.Image.new('RGB',(32,32),(40,70,100))
+                            picture.paste((180,140,80),(8,8,24,24));picture.save(config['output'])
+                            return {'face_found':True}
                         def native(*args,**kwargs):
-                            scene=folder/'AI_jelenetek/jelenet_001'
-                            (scene/'video_settings.json').write_text(json.dumps(dict(frames=33,fps=16,decoder='VAEDecodeTiled')),encoding='utf-8')
+                            scene=Path(kwargs['scene_dir']);frames=scene/'frames';frames.mkdir(parents=True,exist_ok=True)
+                            size=tuple(kwargs['canvas']);count=round(args[6]*16)
+                            for number in range(count):
+                                picture=app.Image.new('RGB',size,(number,70,100))
+                                picture.paste((180,140,80),(8,8,24,24))
+                                picture.save(frames/('frame_%05d.png'%number))
+                            (scene/'video_settings.json').write_text(json.dumps(dict(width=size[0],height=size[1],frames=count,
+                                fps=16,decoder='VAEDecodeTiled')),encoding='utf-8')
                         with (patch.object(quality,'engine_files',return_value=folder),
-                              patch.object(quality,'_worker',return_value={'face_found':True}) as worker,
+                              patch.object(quality,'_worker',side_effect=prepare) as worker,
+                              patch('image_motion.source_dimensions',return_value=(32,32)),
                               patch.object(quality.comfy_video,'generate',side_effect=native),
                               patch('motion_smooth.generate',return_value=folder/'scene.mp4')):
                             quality.generate(engine,project,'','source.jpg',0,work,2)

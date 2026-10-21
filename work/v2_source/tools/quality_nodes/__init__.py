@@ -30,6 +30,59 @@ def plain_tensor(value):
     return value
 
 
+def require_finite_latent(latent, phase):
+    """Never decode a failed GPU calculation into plausible-looking PNG files."""
+    samples=latent.get('samples') if isinstance(latent,dict) else None
+    if (not isinstance(samples,torch.Tensor) or samples.numel()==0 or
+            not bool(torch.isfinite(samples).all().item())):
+        raise RuntimeError('YTMUHELY_INVALID_GPU_RESULT: A videókártya hibás számítási '
+            'eredményt adott a(z) %d. szakaszban. A generálás leállt; nem készül '
+            'szürke videó. Indítsd újra a videómotort, és használj rövidebb részeket.'%phase)
+
+
+class YouTubeCpuCLIPLoader:
+    """Keep UMT5 GGUF dequantization and text inference entirely on CPU.
+
+    A device selector after a regular loader can be too late for its initial
+    load and may retain the GPU-selected inference dtype.  Provide device and
+    float32 choices to CLIP construction itself without changing Comfy globals.
+    The video diffusion models continue to use their normal GPU/CPU offload.
+    """
+    @classmethod
+    def INPUT_TYPES(cls):
+        original=nodes.NODE_CLASS_MAPPINGS.get('CLIPLoaderGGUF')
+        if original is None:raise RuntimeError('A ComfyUI-GGUF kiegészítő szükséges.')
+        return {'required':{'clip_name':(original.get_filename_list(),),
+                            'type':(['wan'],{'default':'wan'})}}
+    RETURN_TYPES=('CLIP',)
+    FUNCTION='load_clip'
+    CATEGORY='YouTube Muhely/quality'
+
+    def load_clip(self,clip_name,type='wan'):
+        if type!='wan':raise ValueError('A CPU-s szövegértelmező csak Wan videóhoz használható.')
+        original=nodes.NODE_CLASS_MAPPINGS.get('CLIPLoaderGGUF')
+        if original is None:raise RuntimeError('A ComfyUI-GGUF kiegészítő szükséges.')
+        if clip_name not in original.get_filename_list():
+            raise ValueError('Nem található a kiválasztott GGUF-szövegértelmező.')
+        gguf_module=importlib.import_module(original.__module__)
+        path=folder_paths.get_full_path_or_raise('clip',clip_name)
+        data=original().load_data([path])
+        cpu=torch.device('cpu')
+        logging.info('YouTube text encoder: CPU float32; GPU GGUF dequantization disabled')
+        clip=comfy.sd.load_text_encoder_state_dicts(
+            clip_type=comfy.sd.CLIPType.WAN,
+            state_dicts=data,
+            model_options={'custom_operations':gguf_module.GGMLOps,
+                'load_device':cpu,'offload_device':cpu,'initial_device':cpu,
+                'dtype':torch.float32},
+            embedding_directory=folder_paths.get_folder_paths('embeddings'),
+            disable_dynamic=True)
+        clip.patcher=gguf_module.GGUFModelPatcher.clone(clip.patcher)
+        if (clip.patcher.load_device!=cpu or clip.patcher.offload_device!=cpu):
+            raise RuntimeError('A szövegértelmező CPU-s betöltése nem igazolható.')
+        return (clip,)
+
+
 class YouTubeGGUFRamLoader:
     @classmethod
     def INPUT_TYPES(cls):
@@ -95,6 +148,7 @@ class YouTubeWan14RamSampler:
                 current=nodes.common_ksampler(shifted,seed,4,1.0,'euler','simple',positive,negative,current,
                     disable_noise=phase==1,start_step=phase*2,last_step=(phase+1)*2,
                     force_full_denoise=phase==1)[0]
+                require_finite_latent(current,phase+1)
             finally:
                 # Both models remain internal to this node. No other workflow
                 # branch can retain or accidentally reuse a released model.
@@ -106,5 +160,5 @@ class YouTubeWan14RamSampler:
         return (current,)
 
 
-NODE_CLASS_MAPPINGS={'YouTubeGGUFRamLoader':YouTubeGGUFRamLoader,'YouTubeWan14RamSampler':YouTubeWan14RamSampler}
-NODE_DISPLAY_NAME_MAPPINGS={'YouTubeGGUFRamLoader':'YouTube • RAM cached GGUF','YouTubeWan14RamSampler':'YouTube • two-stage quality sampler'}
+NODE_CLASS_MAPPINGS={'YouTubeCpuCLIPLoader':YouTubeCpuCLIPLoader,'YouTubeGGUFRamLoader':YouTubeGGUFRamLoader,'YouTubeWan14RamSampler':YouTubeWan14RamSampler}
+NODE_DISPLAY_NAME_MAPPINGS={'YouTubeCpuCLIPLoader':'YouTube • CPU text encoder','YouTubeGGUFRamLoader':'YouTube • RAM cached GGUF','YouTubeWan14RamSampler':'YouTube • two-stage quality sampler'}

@@ -4,7 +4,9 @@ Magyar felületű Windows-program képekből, szövegből és saját videókból
 
 A helyi változat használatához nincs előfizetés és nincs kötelező fizetős API. Az AI-modelleket és az angol hangmotort az első használat előtt külön kell letölteni. A letöltés után a helyi videógenerálás és a Piper-narráció internet nélkül működik. Az áram- és hardverigény a saját gépedet terheli.
 
-Ez a forráskiadás a **15. javítás** helyi programját tartalmazza. A fő videóbeállítások a szélesebb bal oldalon vannak, az angol jelenetleírás és narráció két kompakt mezőben jobbra került. A nyolc táncmozdulat és a mentett munkasor is elérhető. A választható Grok-kapcsolat fizetős külső szolgáltatás, saját xAI API-kulcsot igényel; az ingyenes helyi munkafolyamathoz nem szükséges. Valódi Grok-generálás minőségét ez a kiadás nem igazolja.
+Ez a forráskiadás a **16. javítás** helyi programját tartalmazza. Az Élethű motor a hosszabb jeleneteket kisebb feladatokban számolja, az előző rész utolsó elfogadott képkockájából folytatva. A szövegmodell és a VAE CPU-n, az animáció GPU-n fut. A program ellenőrzi a hibás számértékeket, a PNG-k épségét és a Windows elérhető driver-újraindulási eseményeit; ilyen hiba esetén a munkasor is leáll. Ez hibakezelési védelem, nem garantált driverjavítás vagy arcminőség.
+
+A fő videóbeállítások továbbra is a szélesebb bal oldalon vannak, az angol jelenetleírás és narráció két kompakt mezőben jobbra került. A nyolc táncmozdulat és a mentett munkasor megmaradt. A választható Grok-kapcsolat fizetős külső szolgáltatás, saját xAI API-kulcsot igényel; az ingyenes helyi munkafolyamathoz nem szükséges. Valódi Grok-generálás minőségét ez a kiadás nem igazolja.
 
 ## Mire képes?
 
@@ -24,6 +26,8 @@ Az AI eredménye változó: az arc, a kezek és a ruharészletek torzulhatnak. A
 ## Futtatás forrásból Windows alatt
 
 Python **3.12**, Tkinter és 64 bites Windows szükséges. A helyi AI-motorhoz megfelelő GPU, elegendő RAM és több tíz GB szabad tárhely kell. A fejlesztés AMD RX 9070 XT 16 GB / 96 GB RAM gépen történt; ez nem általános sebességígéret más gépekre.
+
+Az AMD PyTorch/ROCm 7.2.1 Windows-csomag hivatalos követelménye **Windows 11**. Windows 10 alatti GPU-stabilitás nem igazolt. A program az illesztőprogramon és a rendszer védelmein nem változtat. [AMD kiadási megjegyzések](https://www.amd.com/en/resources/support-articles/release-notes/RN-AMDGPU-WINDOWS-PYTORCH-7-2-1.html)
 
 PowerShellben a repository gyökeréből:
 

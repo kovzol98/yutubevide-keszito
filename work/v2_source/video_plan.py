@@ -125,6 +125,12 @@ def describe_video_plan(visual_mode, image_motion, image_engine, ai_quality,
             generation += ' Mozgássimítás: 30 képkocka/mp.'
         timing = ('Részletes: több időt és memóriát kér; egy rövid jelenet is több tíz percig készülhet; első próba: 2 mp.'
                   if detailed else 'Normál: egy rövid jelenet is több tíz percig készülhet; első próba: 2 mp.')
+        if enhanced:
+            cap=33 if detailed else 49
+            timing+=(' A hosszabb jelenet legfeljebb %d képkockás részekben készül, '
+                     'az előző rész utolsó képkockájából folytatva. A kért hossz megmarad. '
+                     'A részek határán a mozgás változhat. GPU-újraindulás vagy hibás '
+                     'képkockák esetén a készítés és a munkasor leáll.'%cap)
     if photo_error:
         generation = 'Az első fotó nem olvasható; a pontos generálási méret nem állapítható meg. ' + generation
     if len(images) > 1 and pipeline in ('portrait', 'quality-image', 'legacy-image'):

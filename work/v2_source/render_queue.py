@@ -349,7 +349,7 @@ class QueueStore:
 
 
 class QueueRunner:
-    """One background worker; failures do not prevent the next pending job."""
+    """Sequential worker; GPU safety failures stop further automatic jobs."""
 
     def __init__(self, store, engine_factory, on_event=None):
         self.store = store
@@ -473,12 +473,16 @@ class QueueRunner:
                                              message='Elkészült', result=str(video), error='')
                 except Exception as error:
                     cancelled = self._cancel.is_set() or (engine is not None and engine.cancel.is_set())
-                    if cancelled:
+                    gpu_failure=getattr(error,'halt_queue',False) is True
+                    if cancelled or gpu_failure:
                         self._stop.set()
                     message = str(error).replace('\0', '')[-4000:] or type(error).__name__
                     job = self.store._update(identifier, status='cancelled' if cancelled else 'failed',
                                              message='Megszakítva' if cancelled else 'Hiba',
                                              result='', error='' if cancelled else message)
+                    if gpu_failure and not cancelled:
+                        self.last_error=message
+                        self._emit('error',{'message':'A munkasor GPU- vagy képkockahiba miatt leállt. '+message})
                 finally:
                     with self.store._lock:
                         self._active_engine = None

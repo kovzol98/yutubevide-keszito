@@ -179,15 +179,20 @@ def cleanup(engine, terminate=True):
 def stop_engine(engine):
     """Application-finally cleanup; only stop the process created by this engine."""
     process=getattr(engine,'_comfy_process',None)
+    base=getattr(engine,'_comfy_url',None)
     if process is not None and process.poll() is None:
         try:
-            queue=_request(getattr(engine,'_comfy_url',None),'/queue',timeout=5)
+            queue=_request(base,'/queue',timeout=5)
             running,pending=_queue_prompt_ids(queue)
             queued=running|pending
             leave_running=bool(queued-{getattr(engine,'_comfy_prompt_id',None)})
         except (OSError,ValueError,RuntimeError):
             # When queue ownership cannot be proved, keep other clients safe.
             leave_running=True
+        if (getattr(engine,'_comfy_process',None) is not process or
+                getattr(engine,'_comfy_url',None)!=base):
+            engine.log('A helyi AI-motor állapota megváltozott; az új folyamatot nem állítottam le.')
+            return
         if leave_running:
             handle=getattr(engine,'_comfy_log_handle',None)
             if handle is not None:handle.close()
@@ -196,6 +201,12 @@ def stop_engine(engine):
             engine.log('A helyi AI-motort futva hagytam, mert másik feladatot is végezhet.')
             return
     cleanup(engine, terminate=True)
+
+
+def _cleanup_log(log, action, error):
+    """Best-effort diagnostics must never replace the triggering exception."""
+    try:log('%s nem sikerült: %s'%(action,error))
+    except BaseException:pass
 
 
 def _ensure_server(engine, root, model_names=None, required_extra=(), force_owned=False):
@@ -234,7 +245,8 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
     handle = log_path.open("ab", buffering=0)
     command = [str(portable / "python_embeded/python.exe"), "-s", str(portable / "ComfyUI/main.py"),
                "--windows-standalone-build", "--listen", "127.0.0.1", "--port", str(port),
-               "--use-pytorch-cross-attention", "--extra-model-paths-config", str(yaml)]
+               "--use-split-cross-attention", "--disable-async-offload", "--disable-pinned-memory",
+               "--cpu-vae", "--extra-model-paths-config", str(yaml)]
     try:
         process = subprocess.Popen(command, cwd=str(portable), stdout=handle, stderr=subprocess.STDOUT,
                                    stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -244,7 +256,7 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
     engine._comfy_process, engine._comfy_log_handle = process, handle
     engine._comfy_url, engine._comfy_root = base, str(root)
     engine._comfy_server_log = log_path
-    engine.log("A helyi AI-videómotor indul…")
+    engine.log("A helyi AI-videómotor indul: kisebb GPU-műveletek, szinkron memóriaátadás; a képfeldolgozás CPU-val készül…")
     started, last_report = time.monotonic(), 0.0
     try:
         while time.monotonic() - started < 180:
@@ -369,7 +381,7 @@ def _cancel_prompt(engine, base, prompt_id, log):
         pass
 
 
-def generate(engine, p, text, image, index, work, duration, *, backend=None):
+def generate(engine, p, text, image, index, work, duration, *, backend=None, scene_dir=None, canvas=None):
     root = Path(p.ai_root).expanduser().resolve()
     (backend.engine_files if backend else engine_files)(root)
     models = dict(backend.MODELS) if backend else selected_models(root)
@@ -379,7 +391,9 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None):
     if turbo: steps = 4
     from image_motion import source_dimensions, prepare_reference, image_motion_prompt, DEFAULT_IMAGE_MOTION
     selected_motion=getattr(p,'image_motion',DEFAULT_IMAGE_MOTION)
-    if image:
+    if canvas is not None:
+        width,height=canvas
+    elif image:
         width,height=source_dimensions(image,width,height)
     elif "Shorts" in p.format:
         width, height = height, width
@@ -387,6 +401,9 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None):
         raise ValueError('A jelenet hosszának pozitív értéknek kell lennie.')
     # Generate enough real frames for the entire scene; AI footage never loops.
     frames=1+4*math.ceil(max(0,fps*duration-1)/4)
+    if backend:
+        from video_workload import validate_segment
+        validate_segment(width,height,frames,quality)
     prompts = [part.strip() for part in re.split(r"\n\s*\n", p.video_prompt.strip()) if part.strip()]
     prompt = prompts[min(index, len(prompts) - 1)] if prompts else ('' if image else (text.strip() or p.title.strip()))
     from video_look import lighting_prompt, DEFAULT_LIGHTING
@@ -398,14 +415,15 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None):
         prompt=lighting_prompt(selected_lighting,prompt)
     target = Path(work).parent / "AI_jelenetek"
     target.mkdir(parents=True, exist_ok=True)
-    scene = target / ("jelenet_%03d" % (index + 1))
-    scene.mkdir(exist_ok=True)
+    scene = Path(scene_dir) if scene_dir is not None else target / ("jelenet_%03d" % (index + 1))
+    scene.mkdir(parents=True,exist_ok=True)
     (scene / "prompt.txt").write_text(prompt, encoding="utf-8")
     log_path = scene / "generalas.log"
     def log(message):
         with log_path.open("a", encoding="utf-8") as stream:
             stream.write(time.strftime("%Y-%m-%d %H:%M:%S ") + message + "\n")
         engine.log(message)
+    if backend and hasattr(backend,'prepare_runtime'):backend.prepare_runtime(engine,root)
     base = _ensure_server(engine, root, models, getattr(backend,'EXTRA_NODES',()), force_owned=bool(backend))
     information = _request(base, "/object_info", timeout=30)
     uploaded = None
@@ -425,7 +443,12 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None):
     prompt_id = None
     monitor = None
     recovery = None
+    health = None
+    primary_error = None
     try:
+        engine.check()
+        from gpu_health import begin_monitor,GpuResultError
+        health=begin_monitor(cancel=engine.check,report_path=scene/'gpu_health.json')
         engine.check()
         client_id = uuid.uuid4().hex
         accepted = _request(base, "/prompt", {"prompt": graph, "client_id": client_id}, timeout=30)
@@ -443,12 +466,16 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None):
         started, last_report, last_clock_report, last_detail = time.monotonic(), 0.0, 0.0, ''
         while True:
             engine.check()
+            health.check()
             history = _request(base, "/history/" + urllib.parse.quote(prompt_id), timeout=15)
             if prompt_id in history:
                 result = history[prompt_id]
                 status = result.get("status", {})
                 if status.get("status_str") == "error":
                     (scene / "history.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+                    health.check(force=True)
+                    if 'YTMUHELY_INVALID_GPU_RESULT' in json.dumps(status,ensure_ascii=False):
+                        raise GpuResultError()
                     if backend and recovery is None:
                         from comfy_recovery import decode_recovery
                         original_process=getattr(engine,'_comfy_process',None)
@@ -498,6 +525,7 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None):
                         raise RuntimeError('A képkockák egyszeri helyreállítása nem sikerült. A mentett jelenet megmaradt; új AI-generálás nem indult. Részletek: '+str(scene/'history.json'))
                     raise RuntimeError("Az AI-motor nem tudta elkészíteni a jelenetet: " + json.dumps(status, ensure_ascii=False)[-3500:])
                 if status.get("completed") or result.get("outputs"):
+                    health.check(force=True)
                     break
             owned = getattr(engine, "_comfy_process", None)
             if owned is not None and owned.poll() is not None:
@@ -550,6 +578,12 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None):
                             break
                         stream.write(chunk)
             os.replace(temporary, destination)
+        from frame_integrity import validate_sequence
+        log('Az AI-képkockák épségének ellenőrzése…')
+        validate_sequence(engine,frame_folder,frames,(width,height),
+                          reference=scene/'reference.png' if image else None,
+                          report_path=scene/'frame_integrity.json')
+        health.check(force=True)
         frame_folder=publish_folder(frame_folder,scene/'frames')
         if recovery is not None:
             recovery['frames_published']=True
@@ -567,12 +601,27 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None):
         log("%d. AI-jelenet elkészült. A narrációhoz igazítom." % (index + 1))
         return video
     except BaseException as error:
+        primary_error=error
+        terminal=error
+        if health is not None and type(error).__name__!='Cancelled':
+            try:health.check(force=True)
+            except Exception as health_error:
+                if getattr(health_error,'halt_queue',False):terminal=health_error
         if recovery is not None:
             recovery.update(completed=False,error_type=type(error).__name__,error=str(error))
             try:(scene/'decode_retry.json').write_text(json.dumps(recovery,ensure_ascii=False,indent=2),encoding='utf-8')
             except OSError:pass
-        _cancel_prompt(engine, base, prompt_id, log)
-        (scene / "video.partial.mp4").unlink(missing_ok=True)
+        try:_cancel_prompt(engine, base, prompt_id, log)
+        except BaseException as cleanup_error:
+            _cleanup_log(log,'A hibás AI-feladat leállítása',cleanup_error)
+        try:(scene / "video.partial.mp4").unlink(missing_ok=True)
+        except BaseException as cleanup_error:
+            _cleanup_log(log,'A félkész videófájl eltávolítása',cleanup_error)
+        if terminal is not error:raise terminal from error
         raise
     finally:
-        if monitor is not None: monitor.close()
+        if monitor is not None:
+            try:monitor.close()
+            except BaseException as cleanup_error:
+                if primary_error is None:raise
+                _cleanup_log(log,'Az AI-folyamat figyelésének lezárása',cleanup_error)

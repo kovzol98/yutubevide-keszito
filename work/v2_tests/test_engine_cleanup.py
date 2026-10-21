@@ -7,6 +7,7 @@ import json,shutil,sys,unittest,uuid
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'work/v2_source'))
 import comfy_video
+from PIL import Image
 
 def malformed_queues():
     return [None, [], {}, {'queue_running': []}, {'queue_pending': []},
@@ -122,15 +123,27 @@ class InterpolationHandoffIntegrationTests(unittest.TestCase):
                 process.poll.return_value=0
                 return 0
             process.wait.side_effect=exited
-            project=SimpleNamespace(ai_root=str(base),enhancement='Finom képjavítás')
+            project=SimpleNamespace(ai_root=str(base),enhancement='Finom képjavítás',
+                ai_quality='Részletes • 1280×704')
+            def prepare(engine,portrait,config,scene,*args):
+                picture=Image.new('RGB',(32,32),(40,70,100))
+                picture.paste((180,140,80),(8,8,24,24));picture.save(config['output'])
+                return {'face_found':True}
             def native(*args,**kwargs):
-                scene=base/'AI_jelenetek/jelenet_001'
-                (scene/'video_settings.json').write_text(json.dumps({'fps':16,'frames':81,'decoder':'VAEDecodeTiled'}))
+                scene=Path(kwargs['scene_dir']);frames=scene/'frames';frames.mkdir(parents=True)
+                size=tuple(kwargs['canvas']);count=round(args[6]*16)
+                for number in range(count):
+                    picture=Image.new('RGB',size,(number,70,100))
+                    picture.paste((180,140,80),(8,8,24,24))
+                    picture.save(frames/('frame_%05d.png'%number))
+                (scene/'video_settings.json').write_text(json.dumps({'width':size[0],'height':size[1],
+                    'fps':16,'frames':count,'decoder':'VAEDecodeTiled'}))
             def interpolate(*args,force_cpu=False,**kwargs):
                 if not force_cpu:self.assertEqual(process.poll(),0)
                 return base/'result.mp4'
             with patch.object(realistic_video,'engine_files',return_value=base),\
-                 patch.object(realistic_video,'_worker',return_value={'face_found':True}),\
+                 patch.object(realistic_video,'_worker',side_effect=prepare),\
+                 patch('image_motion.source_dimensions',return_value=(32,32)),\
                  patch.object(comfy_video,'generate',side_effect=native),\
                  patch.object(comfy_video,'_request',return_value=queue) as request,\
                  patch('motion_smooth.generate',side_effect=interpolate) as smooth:

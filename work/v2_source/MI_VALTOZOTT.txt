@@ -1,7 +1,32 @@
-YouTube Műhely 2 – átrendezett főmenü
-Változat: 2026.10.21-layout-v15
+YouTube Műhely 2 – GPU-hibakezelés és kisebb számítási feladatok
+Változat: 2026.10.21-gpu-v16
 
-A fejlécben a 15. javítás látható.
+A fejlécben a 16. javítás látható.
+Új projektnél Normál a részletesség; betöltéskor a mentett érték marad.
+Az Élethű motor a hosszabb jeleneteket kisebb feladatokban készíti:
+Részletes legfeljebb 33, Normál 49 natív képkocka feladatonként.
+A folytatás az előző rész utolsó elfogadott képkockájából készül.
+A kért hossz megmarad; nincs visszaismételt klip. Az átmenetnél a
+mozgás változhat, tökéletes folytonosságot vagy arcot nem garantál.
+
+Új GPU-indítási mód: darabolt figyelemszámítás, szinkron adatmozgatás,
+laprögzített memória nélkül. A szövegmodell, a fotó- és képkockafeldolgozás CPU-n fut;
+a mozgás számítását továbbra is a GPU végzi. Ez lassíthatja a feldolgozást.
+A rendszer és az illesztőprogram beállításain nem változtat.
+Az AMD ROCm/PyTorch 7.2.1 Windows-csomag hivatalosan Windows 11-et
+támogat. Windows 10-en a GPU-stabilitás nem igazolt.
+
+A motor ellenőrzi a hibás számértékeket. A program a generált PNG-k
+épségét, méretét és a teljesen egyszínű hibás sorozatot is ellenőrzi.
+A Windows elérhető Display/4101 driver-újraindulását futásonként figyeli.
+Hibás AI-számítás, képkockahiba vagy driver-újraindulás esetén nincs
+hamis kész állapot, és a munkasor következő videója sem indul el.
+A köztes fájlok és a diagnosztika megmaradnak. A korábbi hibás videókat
+ez a frissítés nem javítja meg utólag. A kis motor-kiegészítő automatikusan
+frissül; a nagy modelleket nem kell emiatt újra letölteni.
+
+A 15. javításban bevezetett főmenü:
+
 A fő videóbeállítások balra, a szélesebb oszlopba kerültek: kép és fény,
 referenciafotók és videók, tánc és mozgás, mentés, háttérzene, jelenetek
 és munkasor. Az angol jelenetleírás és a narráció jobb oldalon, kisebb
@@ -55,7 +80,7 @@ fut. A kész munkákat újraindításkor nem generálja ismét.
 
 Kérhető leállás az aktuális videó befejezése után. Az aktuális munka
 megszakítása a sort is megállítja; a következő munka nem indul el.
-Hibás videónál napló készül, majd a sor a következő munkával folytatódik.
+Szokásos bemeneti hibánál a sor folytatódik. GPU- vagy képkockahibánál leáll.
 
 A mentett állapot újraindítás után megmarad. A megszakadt munkához kézi
 újrapróbálás kell; ez a teljes videót újrakezdi. A már mentett jelenetek
@@ -203,7 +228,8 @@ felerősíthetett. Most a forrás arcát alapból változatlanul használja;
 a végső MP4 finom élesítése ettől függetlenül választható. A Kar- és
 testmozgás minta kifejezetten helyben maradást és állandó távolságot kér.
 
-Új projektnél a Részletes AI-generálás az alapbeállítás. A korábban mentett
+Ebben a korábbi változatban a Részletes lett az alapérték; a 16. javítástól
+újra a kisebb terhelésű Normál az új projektek alapértéke. A korábban mentett
 projektek megtartják a saját részletességüket. A felület külön jelzi a
 tényleges AI-képméretet és az exportméretet: az 1080p-s mentés önmagában
 nem ad új részleteket egy kisebb felbontásban generált archoz.

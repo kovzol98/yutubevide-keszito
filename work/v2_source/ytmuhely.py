@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 if __name__=='__main__':sys.modules.setdefault('ytmuhely',sys.modules[__name__])
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
-APP_RELEASE = '2026.10.21 • 15. javítás'
+APP_RELEASE = '2026.10.21 • 16. javítás'
 class Cancelled(Exception): pass
 
 def queue_file():
@@ -55,7 +55,7 @@ class Project:
     comfy_url: str = 'http://127.0.0.1:8188'
     comfy_workflow: str = ''
     ai_root: str = ''
-    ai_quality: str = 'Részletes • 1280×704'
+    ai_quality: str = 'Normál • 832×480'
     image_engine: str = 'Élethű • arc és fény'
     lighting: str = 'Eredeti világítás'
     image_motion: str = 'Jelenetleírás szerinti mozgás'
@@ -430,6 +430,7 @@ class Engine:
         dest.mkdir(); self.last_project_folder=dest
         work=dest/'ideiglenes'; work.mkdir()
         (dest/'projekt.json').write_text(json.dumps(asdict(p),ensure_ascii=False,indent=2),encoding='utf-8')
+        primary_error=None
         try:
             from scene_library import create as create_library,add_scene,complete as complete_library
             create_library(self,dest,len(chunks))
@@ -576,16 +577,33 @@ class Engine:
             (dest/'projekt.json').write_text(json.dumps(asdict(p),ensure_ascii=False,indent=2),encoding='utf-8')
             complete_library(self,dest)
             self.progress(100); self.log(f'Elkészült: {dest / "video.mp4"}'); return dest
-        except BaseException:
+        except BaseException as error:
+            primary_error=error
             # Incomplete videos are never presented as finished exports.
             partial=dest/'video.mp4'
-            if partial.exists(): partial.unlink()
+            try:
+                if partial.exists():partial.unlink()
+            except BaseException as cleanup_error:
+                try:self.log('A félkész kimenet eltávolítása nem sikerült: '+str(cleanup_error))
+                except BaseException:pass
             raise
         finally:
-            shutil.rmtree(work,ignore_errors=True)
+            cleanup_failure=None
+            def cleanup_notice(action,error):
+                try:self.log('%s nem sikerült: %s'%(action,error))
+                except BaseException:pass
+            try:shutil.rmtree(work,ignore_errors=True)
+            except BaseException as cleanup_error:
+                cleanup_failure=cleanup_error
+                cleanup_notice('Az ideiglenes mappa lezárása',cleanup_error)
             if mode in LOCAL_AI_MODES:
-                from comfy_video import stop_engine
-                stop_engine(self)
+                try:
+                    from comfy_video import stop_engine
+                    stop_engine(self)
+                except BaseException as cleanup_error:
+                    if cleanup_failure is None:cleanup_failure=cleanup_error
+                    cleanup_notice('A saját AI-motor leállítása',cleanup_error)
+            if primary_error is None and cleanup_failure is not None:raise cleanup_failure
 
 def ai_script(topic,model,images=(),cancel=None):
     payload={'model':model,'stream':True,'prompt':'Write an English YouTube narration of approximately 150-250 words. Return only the spoken script, without headings, stage directions or markdown. If images are provided, describe only what is visible; do not invent facts. The topic may be given in Hungarian; the output must always be English. Topic: '+topic,'options':{'num_predict':700}}
@@ -1223,7 +1241,7 @@ def gui():
         text='AI-arcjavítás\n(megváltoztathatja az arcrészleteket)',variable=face_restore)
     face_restore_input.pack(anchor='w',pady=(9,0));controls.append(face_restore_input)
     hint(look_card,'Alapból kikapcsolva. Újrarajzolhatja a fotó arcát; bizonytalan szem- vagy szemüvegrészleteknél inkább hagyd kikapcsolva.',pady=(5,0))
-    combo(look_card, 'ai_quality', 'AI-jelenet részletessége', list(PRESETS), 'Részletes • 1280×704',
+    combo(look_card, 'ai_quality', 'AI-jelenet részletessége', list(PRESETS), 'Normál • 832×480',
           labels={'Normál • 832×480':'Normál – kisebb AI-részletesség',
                   'Részletes • 1280×704':'Részletes – jobb AI-részletesség, több idő'})
     engine_hint=tk.StringVar()
