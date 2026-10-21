@@ -128,6 +128,12 @@ def image_motion_prompt(style: str | None, user_prompt: str = "") -> str:
     in full, with the preservation instructions appended afterwards.
     """
     settings = IMAGE_MOTION_STYLES[validate_image_motion(style)]
+    if style==DANCE_MOTION and user_prompt.strip():
+        from dance_moves import has_dance_preservation
+        if has_dance_preservation(user_prompt):
+            # A complete chosen choreography already includes identity, group,
+            # lighting and framing. Generic solo dance would conflict with it.
+            return ' '.join(user_prompt.split())
     guidance = settings["guidance"]
     action = " ".join((user_prompt or "").split()) or settings["fallback"]
     if style==DANCE_MOTION and user_prompt.strip():

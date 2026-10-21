@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 if __name__=='__main__':sys.modules.setdefault('ytmuhely',sys.modules[__name__])
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
-APP_RELEASE = '2026.10.20 • 13. javítás'
+APP_RELEASE = '2026.10.21 • 14. javítás'
 class Cancelled(Exception): pass
 
 def queue_file():
@@ -821,11 +821,19 @@ def gui():
     hint(story, 'Mozgásminták: a kiválasztott angol leírást szabadon átírhatod.', pady=(9, 4))
     example_row = ttk.Frame(story)
     example_row.pack(fill='x')
+    def replace_scene_prompt(content):
+        # Tk normally splits delete/insert into two undo operations. Keep a
+        # programmatically selected move together as one reversible edit.
+        previous=prompt.cget('autoseparators')
+        prompt.edit_separator()
+        prompt.configure(autoseparators=False)
+        try:
+            prompt.delete('1.0','end');prompt.insert('1.0',content)
+        finally:
+            prompt.configure(autoseparators=previous)
+            prompt.edit_separator()
     def choose_motion_example(label):
-        prompt.edit_separator()
-        prompt.delete('1.0', 'end')
-        prompt.insert('1.0', MOTION_EXAMPLES[label])
-        prompt.edit_separator()
+        replace_scene_prompt(MOTION_EXAMPLES[label])
         motion_value.set(DANCE_MOTION if label == 'Tánc' else SCENE_MOTION)
         prompt.focus_set()
     for index, label in enumerate(MOTION_EXAMPLES):
@@ -833,6 +841,46 @@ def gui():
         button(example_row, label, lambda label=label: choose_motion_example(label),
                style='Small.TButton').grid(row=0, column=index, sticky='ew',
                    padx=(0 if index == 0 else 5, 0))
+    from dance_moves import DANCE_MOVES,DANCE_INTENSITIES,DEFAULT_DANCE,dance_prompt
+    dance_panel=ttk.Frame(story);dance_panel.pack(fill='x',pady=(12,0))
+    ttk.Label(dance_panel,text='Táncmozdulat').pack(anchor='w',pady=(0,4))
+    dance_choice=tk.StringVar(value=DEFAULT_DANCE)
+    dance_select=ttk.Combobox(dance_panel,textvariable=dance_choice,
+        values=list(DANCE_MOVES),state='readonly')
+    dance_select.pack(fill='x')
+    dance_description=tk.StringVar(value=DANCE_MOVES[DEFAULT_DANCE]['description'])
+    def describe_dance(*args):
+        choice=DANCE_MOVES.get(dance_choice.get())
+        dance_description.set(choice['description'] if choice else '')
+    dance_choice.trace_add('write',describe_dance)
+    hint(dance_panel,textvariable=dance_description,pady=(5,0))
+    ttk.Label(dance_panel,text='Mozgás erőssége').pack(anchor='w',pady=(8,4))
+    dance_intensity=tk.StringVar(value=DANCE_INTENSITIES[0])
+    dance_strength=ttk.Combobox(dance_panel,textvariable=dance_intensity,
+        values=list(DANCE_INTENSITIES),state='readonly')
+    dance_strength.pack(fill='x')
+    dance_group=tk.BooleanVar(value=False)
+    dance_group_control=ttk.Checkbutton(dance_panel,text='Több szereplő együtt',variable=dance_group)
+    dance_group_control.pack(anchor='w',pady=(7,6))
+    def apply_dance():
+        action=dance_prompt(dance_choice.get(),group=dance_group.get(),intensity=dance_intensity.get())
+        replace_scene_prompt(action)
+        motion_value.set(DANCE_MOTION)
+        if values['visual_mode'].get() not in AI_MODES:values['visual_mode'].set(LOCAL_AI_MODES[0])
+        status.set('Táncmozdulat beállítva: '+dance_choice.get()+'. A jelenetleírás szabadon szerkeszthető.')
+        prompt.focus_set()
+    dance_apply_button=button(dance_panel,'Táncmozdulat alkalmazása',apply_dance,style='Small.TButton')
+    dance_apply_button.pack(anchor='w')
+    hint(dance_panel,'Az Alkalmazás a jelenetleírást cseréli; a szöveg Ctrl+Z-vel visszaállítható. '
+        'Teljes alakos fotóval kezdj. A mozdulatot az AI értelmezi, a pontos koreográfia nem garantált.',pady=(6,0))
+    def restore_dance_controls(scene_prompt):
+        normalized=' '.join(scene_prompt.split())
+        for label in DANCE_MOVES:
+            for group in (False,True):
+                for intensity in DANCE_INTENSITIES:
+                    if normalized==' '.join(dance_prompt(label,group=group,intensity=intensity).split()):
+                        dance_choice.set(label);dance_group.set(group);dance_intensity.set(intensity);return True
+        return False
     narration_card = card(left, '02  A történet hangja', 'Angol narráció vagy felirat. Hang nélküli jelenethez hagyd üresen.')
     text = editor(narration_card, 7)
     def pick_text():
@@ -1010,6 +1058,8 @@ def gui():
         busy[0] = flag
         for widget in controls: widget.configure(state='disabled' if flag else 'normal')
         if queue_open_button[0] is not None:queue_open_button[0].configure(state='normal')
+        for widget in (dance_select,dance_strength):widget.configure(state='disabled' if flag else 'readonly')
+        dance_group_control.configure(state='disabled' if flag else 'normal')
         cancel_button.configure(state='normal' if flag else 'disabled')
         refresh_plan[0]()
     def ai(use_images):
@@ -1397,6 +1447,7 @@ def gui():
                 value.set(str(saved))
             text.delete('1.0', 'end'); text.insert('1.0', project.text)
             prompt.delete('1.0', 'end'); prompt.insert('1.0', project.video_prompt)
+            restore_dance_controls(project.video_prompt)
             images[:] = project.images; videos[:] = project.videos; refresh(); sub.set(project.subtitles)
             keep_length.set(project.use_video_length)
             face_restore.set(project.face_restore)
@@ -1498,14 +1549,105 @@ def gui():
         if busy[0] or editor_open or queue_running: app.after(200, finish_close)
         else: destroy_app()
     app.protocol('WM_DELETE_WINDOW', close); pump()
+    ui_diagnostic_failed=[False]
     if '--ui-check' in sys.argv or '--ui-preview-data' in sys.argv:
         gui_context=locals()
         def check_ui():
             queue_flow=None
+            dance_flow=None
             if '--ui-check-queue-flow' in sys.argv:
                 from render_queue_ui import diagnose_main
                 report_arg=sys.argv[sys.argv.index('--ui-check')+1]
                 queue_flow=diagnose_main(gui_context,Path(report_arg).with_suffix('.queue-flow.json'))
+            if '--ui-check-dance-flow' in sys.argv:
+                import uuid
+                from render_queue import QueueStore
+                report_path=Path(sys.argv[sys.argv.index('--ui-check')+1]).resolve()
+                fixture=report_path.parent/('dance_flow_'+uuid.uuid4().hex[:8]);fixture.mkdir(parents=True)
+                saved_values={key:value.get() for key,value in values.items()}
+                saved_prompt=prompt.get('1.0','end-1c');saved_images=list(images)
+                saved_choice=(dance_choice.get(),dance_intensity.get(),dance_group.get())
+                old_build=Engine.build;calls=[];errors=[]
+                old_error=messagebox.showerror
+                old_picker=filedialog.askopenfilename
+                def reject_generation(*args,**kwargs):
+                    calls.append(True);raise RuntimeError('A táncminta alkalmazása nem indíthat generálást.')
+                Engine.build=reject_generation
+                messagebox.showerror=lambda *args:errors.append(str(args))
+                try:
+                    photo=fixture/'reference.png';Image.new('RGB',(96,160),'tan').save(photo)
+                    images[:]=[str(photo)];values['output'].set(str(fixture/'videos'))
+                    values['narration'].set('Nincs narráció');values['visual_mode'].set('Képes diavideó')
+                    variants=[]
+                    for label in DANCE_MOVES:
+                        for group in (False,True):
+                            for intensity in DANCE_INTENSITIES:
+                                dance_choice.set(label);dance_group.set(group);dance_intensity.set(intensity)
+                                dance_apply_button.invoke();project=snapshot()
+                                expected=dance_prompt(label,group=group,intensity=intensity)
+                                assert project.video_prompt==expected and project.image_motion==DANCE_MOTION
+                                assert project.visual_mode==LOCAL_AI_MODES[0]
+                                variants.append(dict(label=label,group=group,intensity=intensity,
+                                    prompt=project.video_prompt,image_motion=project.image_motion))
+                    custom='The original character looks towards the camera.'
+                    prompt.delete('1.0','end');prompt.insert('1.0',custom);prompt.edit_reset()
+                    dance_apply_button.invoke();prompt.edit_undo()
+                    undo_restores=prompt.get('1.0','end-1c')==custom
+                    dance_apply_button.invoke();project=snapshot()
+                    queue_path=fixture/'munkasor.json'
+                    with QueueStore(queue_path) as store:store.add(project)
+                    with QueueStore(queue_path) as store:
+                        queued=store.items()[0]['project']
+                        queue_preserved=queued['video_prompt']==project.video_prompt
+                    queue_json=json.loads(queue_path.read_text(encoding='utf-8'))
+                    schema_compatible=queue_json['schema']==1 and set(queued)==set(asdict(Project()))
+                    project_file=fixture/'projekt.json'
+                    project_file.write_text(json.dumps(asdict(project),ensure_ascii=False),encoding='utf-8')
+                    expected_choice=(dance_choice.get(),dance_intensity.get(),dance_group.get())
+                    dance_choice.set(DEFAULT_DANCE);dance_intensity.set('Finom');dance_group.set(False)
+                    prompt.delete('1.0','end');prompt.insert('1.0',custom)
+                    filedialog.askopenfilename=lambda **kwargs:str(project_file)
+                    load_project()
+                    loaded=snapshot()
+                    project_preserved=loaded.video_prompt==project.video_prompt and (
+                        dance_choice.get(),dance_intensity.get(),dance_group.get())==expected_choice
+                    set_busy(True)
+                    busy_blocks_dance=dance_apply_button.instate(['disabled']) and dance_select.instate(['disabled'])
+                    set_busy(False)
+                    dance_flow=dict(status='PASS',variants=variants,real_hidden_tk=True,
+                        undo_restores_previous=undo_restores,applying_does_not_generate=not calls,
+                        selected_prompt_persisted_in_queue=queue_preserved,
+                        selected_prompt_survives_project_reload=project_preserved,
+                        v13_queue_schema_compatible=schema_compatible,busy_blocks_dance=busy_blocks_dance,
+                        errors=errors,ai_generation_used=False,network_or_paid_requests=False)
+                    assert all((undo_restores,not calls,queue_preserved,project_preserved,
+                        schema_compatible,busy_blocks_dance)) and not errors,dance_flow
+                finally:
+                    Engine.build=old_build;messagebox.showerror=old_error;filedialog.askopenfilename=old_picker
+                    for key,value in saved_values.items():values[key].set(value)
+                    images[:]=saved_images
+                    prompt.delete('1.0','end');prompt.insert('1.0',saved_prompt)
+                    dance_choice.set(saved_choice[0]);dance_intensity.set(saved_choice[1]);dance_group.set(saved_choice[2])
+                    set_busy(False)
+                app.update_idletasks()
+                previous_scroll=left_canvas.yview()[0]
+                reached=[]
+                for control in (dance_select,dance_strength,dance_group_control,dance_apply_button):
+                    left_canvas.yview_moveto(0);app.update_idletasks()
+                    offset=max(0,control.winfo_rooty()-left.winfo_rooty()-12)
+                    left_canvas.yview_moveto(offset/max(1,left.winfo_height()))
+                    app.update_idletasks()
+                    x=control.winfo_rootx()-left_canvas.winfo_rootx()
+                    y=control.winfo_rooty()-left_canvas.winfo_rooty()
+                    width,height=control.winfo_width(),control.winfo_height()
+                    reachable=(control.winfo_ismapped() and x>=-2 and y>=-2
+                        and x+width<=left_canvas.winfo_width()+2 and y+height<=left_canvas.winfo_height()+2)
+                    reached.append(dict(kind=control.winfo_class(),bounds=[x,y,width,height],
+                        viewport=[left_canvas.winfo_width(),left_canvas.winfo_height()],reachable=bool(reachable)))
+                left_canvas.yview_moveto(previous_scroll)
+                dance_flow['controls_reachable_by_scroll']=all(item['reachable'] for item in reached)
+                dance_flow['scrolled_controls']=reached
+                assert dance_flow['controls_reachable_by_scroll'],reached
             app.update_idletasks()
             def box(widget):
                 return [widget.winfo_rootx() - app.winfo_rootx(), widget.winfo_rooty() - app.winfo_rooty(),
@@ -1540,6 +1682,7 @@ def gui():
             visit(outer)
             report = {'window': [app.winfo_width(), app.winfo_height()], 'palette': colors,
                       'queue_flow': queue_flow,
+                      'dance_flow':dance_flow,
                       'scroll_content': right.winfo_reqheight(), 'viewport': canvas.winfo_height(),
                       'left_scroll_content': left.winfo_reqheight(), 'left_viewport': left_canvas.winfo_height(),
                       'actions_visible': action_box[1] >= 0 and action_box[1] + action_box[3] <= app.winfo_height(),
@@ -1574,8 +1717,19 @@ def gui():
                     Path(sys.argv[sys.argv.index(flag) + 1]).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
             if pump_timer[0]: app.after_cancel(pump_timer[0])
             app.destroy()
-        app.after(1000, check_ui)
+        def checked_ui():
+            try:check_ui()
+            except Exception:
+                import traceback
+                ui_diagnostic_failed[0]=True
+                for flag in ('--ui-check','--ui-preview-data'):
+                    if flag in sys.argv:
+                        Path(sys.argv[sys.argv.index(flag)+1]).with_suffix('.error.txt').write_text(
+                            traceback.format_exc(),encoding='utf-8')
+                app.destroy()
+        app.after(1000, checked_ui)
     app.mainloop()
+    if ui_diagnostic_failed[0]:sys.exit(1)
 
 
 if __name__=='__main__':

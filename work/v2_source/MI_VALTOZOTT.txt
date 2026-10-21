@@ -1,7 +1,33 @@
-YouTube Műhely 2 – több videó egymás után, helyi munkasor
-Változat: 2026.10.20-local-queue-v13
+YouTube Műhely 2 – választható táncmozdulatok fotóból
+Változat: 2026.10.21-dance-library-v14
 
-A fejlécben a 13. javítás látható.
+A fejlécben a 14. javítás látható.
+Az 01 Az ötleted részben új táncmozdulat-választó található.
+Válassz táncot és Finom vagy Élénk erősséget. Több karakterhez jelöld be
+a Több szereplő együtt lehetőséget, majd kattints a Táncmozdulat
+alkalmazása gombra. Ez szerkeszthető angol leírást illeszt be, és
+kiválasztja a Teljes alak • tánc (AI-jelenet) mozgásmódot. Az alkalmazás
+önmagában nem indít videókészítést; a szöveg cseréje Ctrl+Z-vel visszavonható.
+A mentés és a munkasor ezt a konkrét jelenetleírást őrzi meg.
+
+Nyolc minta: Oldalazó ringás, Oldallépés zárással, Csípőringás,
+Diszkó karmozdulat, Finom twist, Tapsolós tánc, Egyszerű shuffle,
+Vidám rugózás.
+
+Az egész alakos fotón a kezek és a lábfejek is látszódjanak. Több
+szereplőhöz a Teljes fotó keretezést érdemes használni. A levágott,
+hiányzó testrészek pótlása bizonytalan, a karakterek mozgása eltérhet
+a kért mintától. A fej és a test együtt, teljes jelenetként készül.
+
+Ez mozdulatleírás-gyűjtemény a meglévő AI-motorhoz, nem új modell,
+és nem mintavideó mozgásának pontos átvitele. Nem garantál hibátlan
+arcot vagy koreográfiát. A zene külön keveredik hozzá, automatikus
+ütemillesztés nélkül. Először rövid, Finom mozgással érdemes próbálni.
+A helyi munkasor, angol offline hang, háttérzene és folytatás megmaradt.
+
+A 13. javításban bevezetett funkciók:
+
+Több videó egymás után, helyi munkasor.
 Új rész: 05 Munkasor
 - Hozzáadás a munkasorhoz
 - Munkasor megnyitása…

@@ -1,6 +1,6 @@
 # YouTube Műhely 2 – fotóból mozgó jelenet
 
-Változat: `2026.10.20-local-queue-v13` · 13. javítás
+Változat: `2026.10.21-dance-library-v14` · 14. javítás
 
 Magyar Windows-program, angol narrációval és hozzáadható háttérzenével. Szövegből vagy fotóból mozgó jeleneteket készít, majd feltölthető MP4-videóvá állítja össze őket. Alapból helyben számol; külön választható, fizetős Grok internetes kapcsolat is van. A kezelőfelület meleg grafit, krém és borostyán színű.
 
@@ -17,6 +17,20 @@ Magyar Windows-program, angol narrációval és hozzáadható háttérzenével. 
 Ezen a gépen a motor már telepítve van. Ha a program más helyre kerül, az **AI-motor és erőforrások** résznél válaszd ki az `AI_Motor` mappát. A mellékelt `AI_MOTOR_HELYE.txt` az itteni motor helyét tartalmazza.
 
 A készítés indításakor a program minden felhasznált fotó és videó olvashatóságát ellenőrzi, még az első jelenet elkészítése vagy AI-generálása előtt. A hiányzó vagy sérült forrást előbb cseréld ki.
+
+## Táncmozdulatok a fotón szereplő karakterekhez
+
+Az **01 Az ötleted** részben a **Táncmozdulat** választóval kérhetsz konkrét mozgásmintát a fotó szereplőinek. A **Mozgás erőssége** lehet **Finom** vagy **Élénk**. Ha több karakter táncoljon együtt, jelöld be a **Több szereplő együtt** lehetőséget, majd kattints a **Táncmozdulat alkalmazása** gombra.
+
+Nyolc minta választható: **Oldalazó ringás**, **Oldallépés zárással**, **Csípőringás**, **Diszkó karmozdulat**, **Finom twist**, **Tapsolós tánc**, **Egyszerű shuffle** és **Vidám rugózás**.
+
+A gomb átírja az **Angol jelenetleírás** mezőt a kiválasztott, szerkeszthető táncmozdulatokra, és a mozgásmódot **Teljes alak • tánc (AI-jelenet)** értékre állítja. Az alkalmazás önmagában nem indít videókészítést. A szöveg cseréje a mezőben **Ctrl+Z**-vel visszavonható. Alkalmazás után olvasd át és szükség szerint módosítsd az angol leírást. A projektbe és a munkasorba a beillesztett jelenetleírás kerül; a választók későbbi módosítása csak újabb alkalmazáskor változtatja meg azt.
+
+Válassz éles, jól megvilágított fotót, amelyen az egész alak, a kezek és a lábfejek is látszanak, körülöttük pedig marad hely a mozgásnak. Több szereplőnél a **Fotó keretezése → Teljes fotó** segít megtartani a teljes csoportot. A minták a meglévő képkivágás megtartását és csak a látható ízületek mozgatását kérik. Arcképből így nem várható teljes alakos tánc; a modell a kérés ellenére is kitalálhat hiányzó testrészeket, ezért azok mozgása és aránya bizonytalan lehet.
+
+A kiválasztott mozdulatok angol utasításként kerülnek a már telepített AI-motorhoz. Ez a fejlesztés nem igényel új táncmodellt vagy mintavideót. A fej, a test és a környezet közös jelenetként készül; a program nem illeszt külön fejet a táncoló testre. A modell a mozdulatoktól eltérhet, több karakter mozgása sem garantáltan azonos, és az arc vagy a végtagok továbbra is torzulhatnak. Elsőre rövid, finom mozgást próbálj. A hozzáadott zene az elkészült videóhoz keveredik; a tánc nem kap automatikus ütemillesztést.
+
+Ha többféle táncot szeretnél, alkalmazz egy mintát, add a videót a munkasorhoz, majd válassz másik mintát és add hozzá a következő munkát. A korábban hozzáadott munkák leírása megmarad.
 
 ## Több videó egymás után: munkasor
 
