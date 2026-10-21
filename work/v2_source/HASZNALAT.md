@@ -1,8 +1,10 @@
 # YouTube Műhely 2 – fotóból mozgó jelenet
 
-Változat: `2026.10.21-dance-library-v14` · 14. javítás
+Változat: `2026.10.21-layout-v15` · 15. javítás
 
 Magyar Windows-program, angol narrációval és hozzáadható háttérzenével. Szövegből vagy fotóból mozgó jeleneteket készít, majd feltölthető MP4-videóvá állítja össze őket. Alapból helyben számol; külön választható, fizetős Grok internetes kapcsolat is van. A kezelőfelület meleg grafit, krém és borostyán színű.
+
+A fő videóbeállítások a szélesebb **bal oldalon** találhatók: kép és fény, referenciafotók és videók, tánc és mozgás, valamint mentés, zene, jelenetjavítás és munkasor. A **jobb oldalon** az angol jelenetleírás és narráció kisebb szövegmezőket kapott. Mindkét oldal külön görgethető; hosszabb szöveg a kisebb mezőkbe is beírható.
 
 ## Indítás
 
@@ -20,7 +22,7 @@ A készítés indításakor a program minden felhasznált fotó és videó olvas
 
 ## Táncmozdulatok a fotón szereplő karakterekhez
 
-Az **01 Az ötleted** részben a **Táncmozdulat** választóval kérhetsz konkrét mozgásmintát a fotó szereplőinek. A **Mozgás erőssége** lehet **Finom** vagy **Élénk**. Ha több karakter táncoljon együtt, jelöld be a **Több szereplő együtt** lehetőséget, majd kattints a **Táncmozdulat alkalmazása** gombra.
+A bal oldali **Tánc és mozgás** részben a **Táncmozdulat** választóval kérhetsz konkrét mozgásmintát a fotó szereplőinek. A **Mozgás erőssége** lehet **Finom** vagy **Élénk**. Ha több karakter táncoljon együtt, jelöld be a **Több szereplő együtt** lehetőséget, majd kattints a **Táncmozdulat alkalmazása** gombra.
 
 Nyolc minta választható: **Oldalazó ringás**, **Oldallépés zárással**, **Csípőringás**, **Diszkó karmozdulat**, **Finom twist**, **Tapsolós tánc**, **Egyszerű shuffle** és **Vidám rugózás**.
 

@@ -4,7 +4,7 @@ Magyar felületű Windows-program képekből, szövegből és saját videókból
 
 A helyi változat használatához nincs előfizetés és nincs kötelező fizetős API. Az AI-modelleket és az angol hangmotort az első használat előtt külön kell letölteni. A letöltés után a helyi videógenerálás és a Piper-narráció internet nélkül működik. Az áram- és hardverigény a saját gépedet terheli.
 
-Ez a forráskiadás a **14. javítás** helyi programját tartalmazza, nyolc választható táncmozdulattal és mentett munkasorral több videó egymás utáni elkészítéséhez. A választható Grok-kapcsolat fizetős külső szolgáltatás, saját xAI API-kulcsot igényel; az ingyenes helyi munkafolyamathoz nem szükséges. Valódi Grok-generálás minőségét ez a kiadás nem igazolja.
+Ez a forráskiadás a **15. javítás** helyi programját tartalmazza. A fő videóbeállítások a szélesebb bal oldalon vannak, az angol jelenetleírás és narráció két kompakt mezőben jobbra került. A nyolc táncmozdulat és a mentett munkasor is elérhető. A választható Grok-kapcsolat fizetős külső szolgáltatás, saját xAI API-kulcsot igényel; az ingyenes helyi munkafolyamathoz nem szükséges. Valódi Grok-generálás minőségét ez a kiadás nem igazolja.
 
 ## Mire képes?
 
@@ -50,7 +50,7 @@ Az alkalmazás MP4-et készít; nem jelentkezik be a YouTube-fiókodba, és nem 
 
 ## Tánc a referenciafotón
 
-Az **01 Az ötleted** résznél válassz **Táncmozdulatot**, **Mozgás erősségét**, és szükség esetén **Több szereplő együtt** módot, majd kattints a **Táncmozdulat alkalmazása** gombra. Ez beilleszti a szerkeszthető angol mozgásleírást és kiválasztja a teljes alakos tánc módot; a generálást a szokásos készítésgombbal vagy a munkasorban indíthatod. A leírás cseréje egy Ctrl+Z-vel visszavonható. A beállított leírás a projektben és a munkasorban is megmarad.
+A bal oldali **Tánc és mozgás** résznél válassz **Táncmozdulatot**, **Mozgás erősségét**, és szükség esetén **Több szereplő együtt** módot, majd kattints a **Táncmozdulat alkalmazása** gombra. Ez a jobb oldali mezőbe illeszti a szerkeszthető angol mozgásleírást és kiválasztja a teljes alakos tánc módot; a generálást a szokásos készítésgombbal vagy a munkasorban indíthatod. A leírás cseréje egy Ctrl+Z-vel visszavonható. A beállított leírás a projektben és a munkasorban is megmarad.
 
 Ezek szöveges mozdulatminták a meglévő helyi AI-motorhoz, új modellt nem igényelnek. A pontos koreográfia, a zenével való ütemegyezés és a hibátlan arc nem garantált. Teljes alakos fotóval érdemes kezdeni; a levágott lábak helyét a minta nem kéri kitalálni. A program a teljes jelenetet együtt generálja.
 

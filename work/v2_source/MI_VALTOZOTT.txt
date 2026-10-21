@@ -1,8 +1,20 @@
-YouTube Műhely 2 – választható táncmozdulatok fotóból
-Változat: 2026.10.21-dance-library-v14
+YouTube Műhely 2 – átrendezett főmenü
+Változat: 2026.10.21-layout-v15
 
-A fejlécben a 14. javítás látható.
-Az 01 Az ötleted részben új táncmozdulat-választó található.
+A fejlécben a 15. javítás látható.
+A fő videóbeállítások balra, a szélesebb oszlopba kerültek: kép és fény,
+referenciafotók és videók, tánc és mozgás, mentés, háttérzene, jelenetek
+és munkasor. Az angol jelenetleírás és a narráció jobb oldalon, kisebb
+szövegmezőkben szerkeszthető. A mezők hosszabb szöveget is befogadnak;
+mindkét oszlop külön görgethető.
+
+A táncmintákat a bal oldali Tánc és mozgás részben találod.
+A mozgásminták, a helyi munkasor, az angol hang, a háttérzene és a
+megszakadt helyi munka folytatása megmaradt.
+
+A 14. javításban bevezetett funkciók:
+
+Új táncmozdulat-választó került a programba.
 Válassz táncot és Finom vagy Élénk erősséget. Több karakterhez jelöld be
 a Több szereplő együtt lehetőséget, majd kattints a Táncmozdulat
 alkalmazása gombra. Ez szerkeszthető angol leírást illeszt be, és

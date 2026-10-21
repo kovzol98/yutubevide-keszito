@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 if __name__=='__main__':sys.modules.setdefault('ytmuhely',sys.modules[__name__])
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
-APP_RELEASE = '2026.10.21 • 14. javítás'
+APP_RELEASE = '2026.10.21 • 15. javítás'
 class Cancelled(Exception): pass
 
 def queue_file():
@@ -710,8 +710,8 @@ def gui():
 
     body = tk.Frame(outer, bg=colors['bg'])
     body.grid(row=1, column=0, sticky='nsew')
-    body.columnconfigure(0, weight=3, uniform='columns')
-    body.columnconfigure(1, weight=2, uniform='columns')
+    body.columnconfigure(0, weight=7, uniform='columns')
+    body.columnconfigure(1, weight=3, uniform='columns')
     body.rowconfigure(0, weight=1)
     scroll_surfaces = []
     def scroll_column(column, padding):
@@ -799,13 +799,14 @@ def gui():
         widget = ttk.Combobox(parent, textvariable=shown, values=shown_options, state='readonly')
         widget.pack(fill='x'); inputs.append((key, widget))
         return value
-    def editor(parent, height):
+    def editor(parent, height, *, compact=False):
         frame = tk.Frame(parent, bg=colors['field'], highlightbackground=colors['border'], highlightthickness=1)
         frame.pack(fill='x')
         widget = tk.Text(frame, wrap='word', bg=colors['field'], fg=colors['text'],
                          insertbackground=colors['accent'], selectbackground=colors['selection'],
                          selectforeground=colors['text'], relief='flat', bd=0,
-                         font=('Segoe UI', 11), height=height, padx=11, pady=9, undo=True)
+                         font=('Segoe UI', 11), height=height, padx=8 if compact else 11,
+                         pady=2 if compact else 9, undo=True)
         widget.pack(side='left', fill='both', expand=True)
         bar = ttk.Scrollbar(frame, orient='vertical', command=widget.yview)
         bar.pack(side='right', fill='y'); widget.configure(yscrollcommand=bar.set)
@@ -813,13 +814,14 @@ def gui():
         widget.bind('<FocusOut>', lambda e: frame.configure(highlightbackground=colors['border']))
         return widget
 
-    story = card(left, '01  Az ötleted', 'Írd le a jelenetet, és azt is, hogyan mozogjanak a szereplők.')
+    story = card(left, '01  Az ötleted', 'Add meg a videó címét. Az angol leírásokat a jobb oldalon szerkesztheted.')
     entry(story, 'title', 'Videó címe', 'AI video')
-    ttk.Label(story, text='Angol jelenetleírás').pack(anchor='w', pady=(13, 5))
-    prompt = editor(story, 5)
-    hint(story, 'Példa: A cat walks through a sunlit garden and turns toward the camera.', pady=(7, 0))
-    hint(story, 'Mozgásminták: a kiválasztott angol leírást szabadon átírhatod.', pady=(9, 4))
-    example_row = ttk.Frame(story)
+    script_card=card(right,'Angol jelenetleírás','Írd le röviden, mi történjen a képen.')
+    prompt = editor(script_card, 2,compact=True)
+    hint(script_card, 'Példa: A cat walks through a sunny garden.', pady=(5, 0))
+    motion_card=card(left,'Tánc és mozgás','Válassz mozdulatot, majd alkalmazd a jobb oldali jelenetleírásra.')
+    hint(motion_card, 'Mozgásminták: az angol leírást szabadon átírhatod.', pady=(0, 4))
+    example_row = ttk.Frame(motion_card)
     example_row.pack(fill='x')
     def replace_scene_prompt(content):
         # Tk normally splits delete/insert into two undo operations. Keep a
@@ -842,7 +844,7 @@ def gui():
                style='Small.TButton').grid(row=0, column=index, sticky='ew',
                    padx=(0 if index == 0 else 5, 0))
     from dance_moves import DANCE_MOVES,DANCE_INTENSITIES,DEFAULT_DANCE,dance_prompt
-    dance_panel=ttk.Frame(story);dance_panel.pack(fill='x',pady=(12,0))
+    dance_panel=ttk.Frame(motion_card);dance_panel.pack(fill='x',pady=(12,0))
     ttk.Label(dance_panel,text='Táncmozdulat').pack(anchor='w',pady=(0,4))
     dance_choice=tk.StringVar(value=DEFAULT_DANCE)
     dance_select=ttk.Combobox(dance_panel,textvariable=dance_choice,
@@ -881,8 +883,8 @@ def gui():
                     if normalized==' '.join(dance_prompt(label,group=group,intensity=intensity).split()):
                         dance_choice.set(label);dance_group.set(group);dance_intensity.set(intensity);return True
         return False
-    narration_card = card(left, '02  A történet hangja', 'Angol narráció vagy felirat. Hang nélküli jelenethez hagyd üresen.')
-    text = editor(narration_card, 7)
+    narration_card = card(right, '02  A történet hangja', 'Angol narráció vagy felirat. Hang nélkül hagyd üresen.')
+    text = editor(narration_card, 2,compact=True)
     def pick_text():
         filename = filedialog.askopenfilename(filetypes=[('Szöveg', '*.txt')])
         if filename:
@@ -1050,7 +1052,7 @@ def gui():
         trigger = button(shell, '▸  ' + label, toggle, style='Small.TButton')
         trigger.pack(fill='x', padx=9, pady=8)
         return inner
-    ai_panel = disclosure(left, 'Segítség a narráció megírásához')
+    ai_panel = disclosure(right, 'Segítség a narráció megírásához')
     hint(ai_panel, 'A helyi szövegíróhoz futó Ollama és letöltött modell kell.')
     entry(ai_panel, 'model', 'Ollama-modell', 'gemma3:4b')
     airow = ttk.Frame(ai_panel); airow.pack(fill='x', pady=(10, 0))
@@ -1074,10 +1076,10 @@ def gui():
             except Cancelled: events.put(('cancel', None))
             except Exception as error: events.put(('error', str(error)))
         threading.Thread(target=task, daemon=True).start()
-    button(airow, 'Témából szöveg', lambda: ai(False), style='Small.TButton').pack(side='left', padx=(0, 8))
-    button(airow, 'Képekből szöveg', lambda: ai(True), style='Small.TButton').pack(side='left')
+    button(airow, 'Témából szöveg', lambda: ai(False), style='Small.TButton').pack(fill='x')
+    button(airow, 'Képekből szöveg', lambda: ai(True), style='Small.TButton').pack(fill='x',pady=(6,0))
 
-    media_card = card(right, 'Referencia és mozgókép', 'A képeket az AI megmozdítja; saját klipeket is hozzáadhatsz.')
+    media_card = card(left, 'Referencia és mozgókép', 'A képeket az AI megmozdítja; saját klipeket is hozzáadhatsz.')
     lb = tk.Listbox(media_card, height=4, bg=colors['field'], fg=colors['text'],
                     selectbackground=colors['selection'], selectforeground=colors['text'],
                     relief='flat', bd=0, highlightthickness=1, highlightbackground=colors['border'],
@@ -1130,7 +1132,7 @@ def gui():
     hint(own_panel,'0% némítja a saját videók hangját. Új narráció mellé érdemes halkabbra állítani.',pady=(5,0))
     hint(own_panel,'Új narráció esetén a képsor a felolvasás hosszához igazodik.',pady=(5,0))
 
-    look_card = card(right, 'Kép és fény', 'Válaszd ki a jelenetek hangulatát és részletességét.')
+    look_card = card(left, 'Kép és fény', 'Válaszd ki a jelenetek hangulatát és részletességét.')
     combo(look_card, 'visual_mode', 'Videó forrása', ['AI-videó • helyi', GROK_MODE, 'Saját videók', 'Képes diavideó'])
     grok_panel=ttk.Frame(look_card)
     grok_panel.pack(fill='x')
@@ -1232,9 +1234,11 @@ def gui():
         chosen=resolved_motion(motion_value.get(),prompt.get('1.0','end').strip())
         if chosen!=motion_value.get(): motion_value.set(chosen)
     prompt.bind('<FocusOut>',sync_requested_motion,add='+')
-    look_card.pack_configure(before=media_card)
+    look_card.pack_configure(after=story)
+    media_card.pack_configure(after=look_card)
 
-    export_card = card(right, 'Hang és mentés')
+    export_card = card(left, 'Hang és mentés')
+    export_card.pack_configure(after=media_card)
     combo(export_card, 'narration', 'Narráció', list(NARRATIONS))
     hint(export_card, 'Az internetes hang a szöveget külső szolgáltatáshoz küldi.', pady=(5, 0))
     combo(export_card, 'format', 'Videó exportmérete', list(SIZES))
@@ -1293,7 +1297,7 @@ def gui():
             filename = filedialog.askopenfilename(filetypes=[('Hang', '*.mp3 *.wav *.m4a *.ogg *.flac'), ('Minden fájl', '*.*')])
             if filename: values[key].set(filename)
         button(sound_panel, 'Hangfájl kiválasztása', pick, style='Small.TButton').pack(anchor='w', pady=(6, 0))
-    advanced = disclosure(right, 'AI-motor és erőforrások')
+    advanced = disclosure(left, 'AI-motor és erőforrások')
     installed = home.parent.parent / 'AI_Motor'
     motor_hint = home / 'AI_MOTOR_HELYE.txt'
     if motor_hint.is_file():
@@ -1672,6 +1676,7 @@ def gui():
                 fg = option('foreground') or style.lookup(style_name, 'foreground')
                 return {'id': str(widget), 'parent': str(widget.master) if widget.master else '',
                         'kind': kind, 'bounds': box(widget), 'mapped': bool(widget.winfo_ismapped()),
+                        'height_rows': int(widget.cget('height')) if isinstance(widget,tk.Text) else None,
                         'text': content, 'background': str(bg), 'foreground': str(fg),
                         'font': str(option('font') or style.lookup(style_name, 'font')),
                         'style': style_name, 'wraplength': str(option('wraplength'))}
