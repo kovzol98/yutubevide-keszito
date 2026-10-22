@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 if __name__=='__main__':sys.modules.setdefault('ytmuhely',sys.modules[__name__])
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
-APP_RELEASE = '2026.10.21 • 17. javítás'
+APP_RELEASE = '2026.10.22 • 18. javítás'
 class Cancelled(Exception): pass
 
 def queue_file():

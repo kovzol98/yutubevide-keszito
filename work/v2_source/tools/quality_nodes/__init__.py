@@ -7,6 +7,7 @@ import gc
 import importlib
 import inspect
 import logging
+import math
 import sys
 import torch
 import comfy.sd
@@ -38,6 +39,158 @@ def require_finite_latent(latent, phase):
         raise RuntimeError('YTMUHELY_INVALID_GPU_RESULT: A videókártya hibás számítási '
             'eredményt adott a(z) %d. szakaszban. A generálás leállt; nem készül '
             'szürke videó. Indítsd újra a videómotort, és használj rövidebb részeket.'%phase)
+
+
+ATTENTION_SCORE_BYTES = 128 * 1024**2
+
+
+def _attention_tile_shape(heads, query_tokens, key_tokens,
+                          score_budget=ATTENTION_SCORE_BYTES):
+    """Bound each FP32 score tensor, including non-divisible final tiles.
+
+    Score, softmax result and a possible mask temporary have a combined
+    budget of at most three score buffers. This is independent of WDDM's
+    available-memory estimate. Full keys participate in every softmax, so
+    tiling changes scheduling only, never the attention calculation.
+    """
+    if any(type(value) is not int or value <= 0
+           for value in (heads, query_tokens, key_tokens, score_budget)):
+        raise ValueError('A figyelemszámítás méretei pozitív egész számok legyenek.')
+    rows = score_budget // (key_tokens * 4)
+    if rows < 1:
+        raise ValueError('Egy figyelemsor sem fér a biztonságos memóriakeretbe.')
+    head_tile = min(heads, 4, rows)
+    query_tile = min(query_tokens, 1024, max(1, rows // head_tile))
+    return head_tile, query_tile
+
+
+def _attention_mask(mask, batch, heads, queries, keys):
+    """Normalize broadcastable masks without materializing an attention matrix."""
+    if mask is None:
+        return None
+    if mask.ndim == 2:
+        mask = mask.unsqueeze(0).unsqueeze(0)
+    elif mask.ndim == 3:
+        # Comfy's PyTorch attention treats a 3D mask as [batch, query, key].
+        mask = mask.unsqueeze(1)
+    elif mask.ndim != 4:
+        raise ValueError('A figyelemmaszk két-, három- vagy négydimenziós legyen.')
+    if any(size not in (1, target) for size, target
+           in zip(mask.shape, (batch, heads, queries, keys))):
+        raise ValueError('A figyelemmaszk mérete nem illik a jelenethez.')
+    if mask.dtype != torch.bool and not torch.is_floating_point(mask):
+        raise ValueError('A figyelemmaszk logikai vagy lebegőpontos legyen.')
+    return mask
+
+
+def bounded_attention(q, k, v, heads, mask=None, attn_precision=None,
+                      skip_reshape=False, skip_output_reshape=False, **kwargs):
+    """Exact WAN attention with a hard 128 MiB FP32 score-tensor limit.
+
+    Installed on the two models owned by this node only. It does not patch
+    Comfy globals, use approximate/local attention, or alter the video canvas.
+    The stock split implementation can revert to a full matrix whenever its
+    token count is not divisible by its split count. Range-based tiles always
+    include a shorter final tile instead. FP32 scores and softmax also avoid
+    half-precision accumulation overflow.
+    """
+    if kwargs.get('is_causal', False) or kwargs.get('dropout_p', 0.0) != 0.0:
+        raise ValueError('A helyi WAN-motor nem használ oksági vagy dropout figyelmet.')
+    if type(heads) is not int or heads <= 0:
+        raise ValueError('A figyelemfejek száma pozitív egész szám legyen.')
+    if any(tensor.device != q.device for tensor in (k, v)):
+        raise ValueError('A figyelemszámítás tenzorai azonos eszközön legyenek.')
+    if any(not torch.is_floating_point(tensor) for tensor in (q, k, v)):
+        raise ValueError('A figyelemszámítás lebegőpontos tenzorokat igényel.')
+    if skip_reshape:
+        if any(tensor.ndim != 4 for tensor in (q, k, v)):
+            raise ValueError('A rendezett figyelemtenzorok négydimenziósak legyenek.')
+        batch, actual_heads, queries, channels = q.shape
+        kv_heads = k.shape[1]
+        if actual_heads != heads:
+            raise ValueError('A figyelemfejek száma nem egyezik a tenzorral.')
+    else:
+        if any(tensor.ndim != 3 for tensor in (q, k, v)):
+            raise ValueError('A WAN figyelemtenzorok háromdimenziósak legyenek.')
+        batch, queries, width = q.shape
+        if width % heads:
+            raise ValueError('A figyelemtenzor szélessége nem osztható a fejek számával.')
+        channels = width // heads
+        if channels < 1 or k.shape[-1] % channels:
+            raise ValueError('A kulcstenzor szélessége hibás.')
+        kv_heads = k.shape[-1] // channels
+        if kv_heads < 1 or v.shape[-1] % kv_heads:
+            raise ValueError('Az értéktenzor szélessége hibás.')
+        q = q.reshape(batch, queries, heads, channels).transpose(1, 2)
+        k = k.reshape(k.shape[0], k.shape[1], kv_heads, channels).transpose(1, 2)
+        v = v.reshape(v.shape[0], v.shape[1], kv_heads, v.shape[-1] // kv_heads).transpose(1, 2)
+    if (min(batch, queries, channels, kv_heads) < 1 or
+            k.shape[0] != batch or v.shape[0] != batch or
+            k.shape[1] != v.shape[1] or k.shape[2] != v.shape[2] or
+            k.shape[-1] != channels or v.shape[-1] < 1):
+        raise ValueError('A WAN figyelemtenzorok méretei nem illeszkednek.')
+    grouped = kwargs.get('enable_gqa', False)
+    if (not grouped and kv_heads != heads) or heads % kv_heads:
+        raise ValueError('A lekérdezés- és kulcsfejek száma nem illeszkedik.')
+    keys = k.shape[2]
+    head_tile, query_tile = _attention_tile_shape(heads, queries, keys)
+    mask = _attention_mask(mask, batch, heads, queries, keys)
+    if mask is not None and mask.device != q.device:
+        raise ValueError('A figyelemmaszk azonos eszközön legyen a tenzorokkal.')
+    scale = kwargs.get('scale', channels ** -0.5)
+    if isinstance(scale, bool) or not isinstance(scale, (int, float)) or not math.isfinite(scale):
+        raise ValueError('A figyelemszámítás skálája véges szám legyen.')
+    output = torch.empty((batch, heads, queries, v.shape[-1]),
+                         dtype=q.dtype, device=q.device)
+    # Prevent an ambient autocast context from converting the bounded FP32
+    # matrix multiplication back to half precision.
+    with torch.autocast(device_type=q.device.type, enabled=False):
+        for batch_index in range(batch):
+            for head_start in range(0, heads, head_tile):
+                head_stop = min(head_start + head_tile, heads)
+                if kv_heads == heads:
+                    key = k[batch_index, head_start:head_stop].float()
+                    value = v[batch_index, head_start:head_stop].float()
+                else:
+                    indices = torch.tensor([head // (heads // kv_heads)
+                        for head in range(head_start, head_stop)],
+                        dtype=torch.long, device=k.device)
+                    key = k[batch_index, indices].float()
+                    value = v[batch_index, indices].float()
+                key = key.transpose(1, 2)
+                for query_start in range(0, queries, query_tile):
+                    comfy.model_management.throw_exception_if_processing_interrupted()
+                    query_stop = min(query_start + query_tile, queries)
+                    query = q[batch_index, head_start:head_stop,
+                              query_start:query_stop].float()
+                    scores = torch.bmm(query, key)
+                    scores.mul_(scale)
+                    del query
+                    fully_masked = None
+                    if mask is not None:
+                        mask_batch = 0 if mask.shape[0] == 1 else batch_index
+                        mask_head = slice(0, 1) if mask.shape[1] == 1 else slice(head_start, head_stop)
+                        mask_query = slice(0, 1) if mask.shape[2] == 1 else slice(query_start, query_stop)
+                        tile_mask = mask[mask_batch, mask_head, mask_query]
+                        if mask.dtype == torch.bool:
+                            scores.masked_fill_(~tile_mask, -math.inf)
+                        else:
+                            scores.add_(tile_mask)
+                        fully_masked = torch.isneginf(scores).all(dim=-1, keepdim=True)
+                        del tile_mask
+                    probabilities = scores.softmax(dim=-1)
+                    del scores
+                    if fully_masked is not None:
+                        # Match SDPA's zero result for a wholly masked row.
+                        # Other NaNs remain visible to the finite-latent guard.
+                        probabilities.masked_fill_(fully_masked, 0.0)
+                    output[batch_index, head_start:head_stop,
+                           query_start:query_stop] = torch.bmm(probabilities, value)
+                    del probabilities
+                del key, value
+    if skip_output_reshape:
+        return output
+    return output.transpose(1, 2).reshape(batch, queries, heads * v.shape[-1])
 
 
 class YouTubeCpuCLIPLoader:
@@ -143,6 +296,7 @@ class YouTubeWan14RamSampler:
             logging.info('YouTube quality stage %d/2: loading %s',phase+1,name)
             model=YouTubeGGUFRamLoader().load(name,'float16')[0]
             shifted=ModelSamplingSD3().patch(model,5.0)[0]
+            shifted.set_model_optimized_attention(bounded_attention)
             try:
                 quality_phase(phase+1,'sampling')
                 current=nodes.common_ksampler(shifted,seed,4,1.0,'euler','simple',positive,negative,current,

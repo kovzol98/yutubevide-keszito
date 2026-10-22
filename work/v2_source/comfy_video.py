@@ -541,7 +541,8 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None, sce
                 if status.get("status_str") == "error":
                     (scene / "history.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
                     health.check(force=True)
-                    if 'YTMUHELY_INVALID_GPU_RESULT' in json.dumps(status,ensure_ascii=False):
+                    from comfy_errors import execution_error, has_invalid_gpu_result
+                    if has_invalid_gpu_result(status):
                         raise GpuResultError()
                     if backend and recovery is None:
                         from comfy_recovery import decode_recovery
@@ -589,8 +590,10 @@ def generate(engine, p, text, image, index, work, duration, *, backend=None, sce
                             monitor=JobProgress(base,client_id,prompt_id);monitor.start()
                             continue
                     if recovery is not None:
-                        raise RuntimeError('A képkockák egyszeri helyreállítása nem sikerült. A mentett jelenet megmaradt; új AI-generálás nem indult. Részletek: '+str(scene/'history.json'))
-                    raise RuntimeError("Az AI-motor nem tudta elkészíteni a jelenetet: " + json.dumps(status, ensure_ascii=False)[-3500:])
+                        error = execution_error(status, scene / 'history.json')
+                        error.args = ('A képkockák egyszeri helyreállítása nem sikerült. A mentett jelenet megmaradt; új AI-generálás nem indult.\n' + str(error),)
+                        raise error
+                    raise execution_error(status, scene / 'history.json')
                 if status.get("completed") or result.get("outputs"):
                     health.check(force=True)
                     break

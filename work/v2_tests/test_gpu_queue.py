@@ -14,6 +14,7 @@ sys.path[:0] = [str(ROOT / 'work/packages'), str(ROOT / 'work/v2_source')]
 import render_queue as rq
 import gpu_health
 from frame_integrity import FrameIntegrityError
+from comfy_errors import ComfyOutOfMemoryError
 from ytmuhely import Project
 
 
@@ -80,6 +81,9 @@ class GpuQueueTests(unittest.TestCase):
 
     def test_uniform_or_corrupt_frame_failure_stops_after_failed_first_job(self):
         self.assert_stops_queue(FrameIntegrityError('Invalid generated frames'))
+
+    def test_comfy_memory_failure_stops_after_failed_first_job(self):
+        self.assert_stops_queue(ComfyOutOfMemoryError('Nincs elég memória az AI-jelenethez.'))
 
 
 if __name__ == '__main__':

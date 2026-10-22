@@ -1,6 +1,6 @@
 # YouTube Műhely 2 – fotóból mozgó jelenet
 
-Változat: `2026.10.21-startup-v17` · 17. javítás
+Változat: `2026.10.22-attention-v18` · 18. javítás
 
 Magyar Windows-program, angol narrációval és hozzáadható háttérzenével. Szövegből vagy fotóból mozgó jeleneteket készít, majd feltölthető MP4-videóvá állítja össze őket. Alapból helyben számol; külön választható, fizetős Grok internetes kapcsolat is van. A kezelőfelület meleg grafit, krém és borostyán színű.
 
@@ -30,6 +30,16 @@ Az indítási várakozás legfeljebb három perc. Ha a motor kilép vagy nem vá
 
 A javításhoz a nagy modelleket nem kell újra letölteni. A motor indulásának ellenőrzése nem gyorsítja az AI-jelenetek számítását; az alábbi GPU- és képkockaellenőrzések továbbra is működnek.
 
+## A 18. javítás: memóriahasználat álló képeknél
+
+Egy részletes, álló képből készített jelenetnél a motor 71,08 GiB videomemóriát próbált egyszerre lefoglalni. A hiba a figyelemszámítás darabolásában volt: ha a képből és a képkockaszámból adódó méret nem volt pontosan osztható a darabok számával, a régi eljárás visszaváltott a teljes mátrixra. A 18. javítás a saját Élethű motorban a maradékot is kisebb darabban számolja, így ennél a lépésnél nem tér vissza a teljes, 71 GiB-os foglaláshoz.
+
+A javított eljárás a figyelemszámítás egyes, 32 bites részpontszámpuffereit legfeljebb **128 MiB** méretűre korlátozza. Ez **pufferenkénti korlát**, nem a teljes GPU-memóriahasználat felső határa. A modell, a további köztes adatok és a képkockák feldolgozása is memóriát kér; más lépésben továbbra is előfordulhat memóriahiány. A kért AI-részletesség, képkockaszám és videóhossz ettől nem csökken.
+
+Memóriahiánynál a felugró ablak rövid, olvasható hibát mutat: a kért memória, a kártya teljes memóriája és az érintett lépés szerepelhet benne. A hosszú számítási tömbök helyett megadja a jelenetrész **`history.json`** fájljának helyét, amely megőrzi a technikai részleteket. Memóriahiány esetén a munkasor is megáll; a következő videók várakozók maradnak. Újrapróbálás előtt választhatsz Normál részletességet, és bezárhatod a többi GPU-t használó programot.
+
+A nagy modelleket emiatt nem kell újra letölteni. A javítás a saját motor kiegészítőjével kerül be, a rendszer és az illesztőprogram beállításain nem változtat. Nem ad új arc- vagy mozgásmodellt, és nem garantál hibátlan generált arcot vagy gyorsabb futást. A Windows 11-re váltás önmagában ezt a számítási hibát nem javítja ki.
+
 ## GPU-hiba és hosszabb helyi jelenetek
 
 A 16. javítástól az Élethű motor hosszabb jelenetei kisebb, egymás utáni AI-feladatokban készülnek. Részletes módban egy feladat legfeljebb **33**, Normál módban **49** natív képkockát számol 16 képkocka/mp sebességgel. Egy 10 másodperces részletes jelenet így öt részből áll. A következő rész az előző rész utolsó elfogadott képkockáját használja; az átfedő első képkocka csak egyszer kerül a videóba. A kért videóhossz megmarad, a program nem ismétli vissza a klipet. A határoknál a mozgás vagy a megjelenés változhat; ez nem garantál tökéletes arcot vagy folytonosságot.
@@ -42,7 +52,7 @@ Az AMD PyTorch/ROCm 7.2.1 Windows-csomagjához az AMD **Windows 11** rendszert s
 
 A motor mindkét számítási szakasz után ellenőrzi a hibás számértékeket. A program minden visszakapott képkockát megnyit és ellenőriz. Ha egy részletgazdag fotóból csak egyszínű szürke vagy fekete képkockák készülnek, nem jelzi kész videónak. A valódi, részletgazdag állókép vagy egy szándékosan egyszínű referencia ettől nem hibás.
 
-Windows alatt a program a generálás idejére figyeli az elérhető Display/4101 illesztőprogram-újraindulási eseményeket. Ilyen hiba, hibás számítás vagy hibás képkockák esetén a munkasor is megáll; a következő videó várakozó marad. A köztes fájlok diagnosztikához megmaradnak. A `gpu_health.json` jelzi, ha a Windows eseménynaplója nem olvasható; a számítás- és képkockaellenőrzés ettől még működik. Újrapróbálás előtt indítsd újra az AI-motort és csökkentsd a részletességet. A régi, már hibás videó utólag ettől nem javul meg.
+Windows alatt a program a generálás idejére figyeli az elérhető Display/4101 illesztőprogram-újraindulási eseményeket. Ilyen hiba, memóriahiány, hibás számítás vagy hibás képkockák esetén a munkasor is megáll; a következő videó várakozó marad. A köztes fájlok diagnosztikához megmaradnak. A `gpu_health.json` jelzi, ha a Windows eseménynaplója nem olvasható; a számítás- és képkockaellenőrzés ettől még működik. Újrapróbálás előtt indítsd újra az AI-motort és csökkentsd a részletességet. A régi, már hibás videó utólag ettől nem javul meg.
 
 A kis biztonsági kiegészítőt a program a következő helyi Élethű generálás előtt frissíti a saját motorában. A nagy modelleket emiatt nem kell újra letölteni. A rendszer és a videókártya beállításain nem változtat.
 

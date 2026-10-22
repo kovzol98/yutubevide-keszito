@@ -1,7 +1,31 @@
-YouTube Műhely 2 – Helyi AI-motor indításának javítása
-Változat: 2026.10.21-startup-v17
+YouTube Műhely 2 – Memóriahasználat javítása álló képeknél
+Változat: 2026.10.22-attention-v18
 
-A fejlécben a 17. javítás látható.
+A fejlécben a 18. javítás látható.
+A saját Élethű motorban javítottuk a figyelemszámítás darabolását.
+Az álló képből adódó, nem pontosan osztható méretet is kisebb
+darabokban kezeli. A korábbi hiba ilyenkor a teljes mátrixra váltott
+vissza, és egy 832×1056-os, 33 képkockás feladatnál 71,08 GiB
+videomemóriát próbált lefoglalni. Ez a visszaváltás megszűnik.
+Az egyes, 32 bites részpontszámpufferek mérete legfeljebb 128 MiB.
+Ez pufferenkénti korlát; nem a teljes GPU-memóriahasználat határa,
+és nem zárja ki más számítási lépés memóriahiányát.
+A kiválasztott részletesség, képkockaszám és videóhossz megmarad.
+
+Memóriahiánynál rövid, érthető hiba jelenik meg a többoldalas
+számítási tömbök helyett. A technikai részleteket az érintett
+jelenetrész history.json fájlja őrzi; az ablak megadja a helyét.
+Memóriahiány esetén a munkasor is megáll, a következő videók várnak.
+A meglévő GPU-, számítás- és képkockaellenőrzések megmaradtak.
+A nagy modelleket nem kell újra letölteni. A kis motor-kiegészítő
+a következő helyi Élethű generálás előtt frissül a saját motorban.
+Nem változtatja meg az illesztőprogramot vagy a Windows beállításait.
+A Windows 11 önmagában ezt a darabolási hibát nem javítja ki.
+A javítás nem új arc- vagy mozgásmodell, és nem garantál gyorsabb
+futást, hibátlan arcot vagy a mintavideóval egyező mozgást.
+
+A 17. javítás motorindítási változásai megmaradtak:
+
 A csomagolt Windows-program helyi kapcsolati hibájának javítása:
 a régi EXE a már futó motort sem érte el, mert a kapcsolódás előtt
 hibázott. Emiatt három perc után téves indítási hibát jelzett.
