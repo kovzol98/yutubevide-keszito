@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 if __name__=='__main__':sys.modules.setdefault('ytmuhely',sys.modules[__name__])
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
-APP_RELEASE = '2026.10.22 • 18. javítás'
+APP_RELEASE = '2026.10.24 • 19. javítás • Windows 11'
 class Cancelled(Exception): pass
 
 def queue_file():
@@ -1361,6 +1361,28 @@ def gui():
             except Exception:events.put(('resources','Videomemória: az ellenőrzés nem érhető el.'))
         threading.Thread(target=task,daemon=True).start()
     button(advanced,'Videomemória ellenőrzése',check_gpu_resources,style='Small.TButton').pack(anchor='w',pady=(9,0))
+    from windows_support import system_label
+    tk.Label(advanced,text=system_label(),bg=colors['card'],fg=colors['muted'],
+             font=('Segoe UI',9),anchor='w').pack(fill='x',pady=(9,0))
+    def check_windows_ai():
+        engine=Engine();current[0]=engine;set_busy(True)
+        target=values['ai_root'].get().strip()
+        status.set('Windows 11 és az AI-motor GPU-számításának ellenőrzése…')
+        def task():
+            try:
+                from windows_support import check_environment,describe
+                result=check_environment(target,engine.cancel)
+                engine.check()
+                folder=home/'Ellenorzesek';folder.mkdir(parents=True,exist_ok=True)
+                path=folder/('Windows11_AI_'+datetime.now().strftime('%Y%m%d_%H%M%S')+'.json')
+                path.write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+                events.put(('windows_check',(result['status'],describe(result),str(path))))
+            except Cancelled:events.put(('cancel',None))
+            except Exception as error:events.put(('error',str(error)))
+        threading.Thread(target=task,daemon=True).start()
+    windows_check_button=button(advanced,'Windows 11 és AI ellenőrzése',check_windows_ai,style='Small.TButton')
+    windows_check_button.pack(anchor='w',pady=(6,0))
+
 
     bottom = tk.Frame(outer, bg=colors['bg'])
     bottom.grid(row=2, column=0, sticky='ew', pady=(14, 0))
@@ -1522,6 +1544,11 @@ def gui():
                                 +f'{attention} feladat kér figyelmet. Részletek a munkasor ablakában.')
                 elif kind == 'setup': status.set('Az AI-motor telepítve. Indíthatod a videó készítését.'); set_busy(False)
                 elif kind == 'resources':resource_hint.set(data);status.set(data);set_busy(False)
+                elif kind == 'windows_check':
+                    check_status,summary,report_path=data
+                    status.set(summary.replace('\n',' • '));set_busy(False)
+                    show=messagebox.showinfo if check_status=='PASS' else messagebox.showwarning
+                    show('Windows 11 és AI ellenőrzése',summary+'\n\nJelentés: '+report_path)
                 elif kind == 'ai':
                     text.delete('1.0', 'end'); text.insert('1.0', data)
                     status.set('Az angol narráció elkészült. Ellenőrizd a videó készítése előtt.'); set_busy(False)
@@ -1725,6 +1752,7 @@ def gui():
                       'video_plan_hints': {'generation': widget_data(engine_hint_label),
                           'export': widget_data(export_hint_label)},
                       'gpu_resource_hint':widget_data(resource_hint_label),
+                      'windows_support':{'system':system_label(),'button':widget_data(windows_check_button)},
                       'field_widgets': {key: {'bounds': box(widget), 'mapped': bool(widget.winfo_ismapped()),
                           'value': values[key].get()} for key, widget in inputs},
                       'editors': {'scene_prompt': widget_data(prompt), 'narration': widget_data(text),
@@ -1756,7 +1784,17 @@ def gui():
 
 
 if __name__=='__main__':
-    if len(sys.argv)>1 and sys.argv[1]=='--motor-check':
+    if len(sys.argv)>1 and sys.argv[1]=='--system-check':
+        try:
+            from windows_support import diagnose
+            result=diagnose(sys.argv[2])
+            if result['status']!='PASS':sys.exit(1)
+        except Exception as error:
+            from motor_diagnostic import _safe_text
+            Path(sys.argv[2]).with_suffix('.error.txt').write_text(
+                type(error).__name__+': '+_safe_text(error),encoding='utf-8')
+            sys.exit(1)
+    elif len(sys.argv)>1 and sys.argv[1]=='--motor-check':
         try:
             from motor_diagnostic import diagnose
             result=diagnose(sys.argv[2])

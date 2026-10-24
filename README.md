@@ -4,7 +4,19 @@ Magyar felületű Windows-program képekből, szövegből és saját videókból
 
 A helyi változat használatához nincs előfizetés és nincs kötelező fizetős API. Az AI-modelleket és az angol hangmotort az első használat előtt külön kell letölteni. A letöltés után a helyi videógenerálás és a Piper-narráció internet nélkül működik. Az áram- és hardverigény a saját gépedet terheli.
 
-Ez a forráskiadás a **18. javítás** helyi programját tartalmazza. A saját Élethű motor modellhez kötött figyelemszámítása a nem pontosan osztható álló képméreteket is kisebb részekben kezeli. Megszünteti a hibát, amely 832×1056-os képnél, 33 képkockával egyszerre 71,08 GiB videomemóriát próbált lefoglalni. Egy 32 bites pontszámpuffer legfeljebb 128 MiB; ez nem a teljes GPU-memóriahasználat korlátja. A teljes kulcssor részt vesz a számításban, a felbontás és videóhossz megmarad. Memóriahiánynál rövid hiba jelenik meg, a teljes technikai előzmény a helyi `history.json` fájlban marad; a munkasor következő elemei várakoznak. Új modellletöltés nem szükséges. A javítás nem garantál gyorsabb generálást vagy jobb arcminőséget.
+Ez a forráskiadás a **19. javítás – Windows 11** változatát tartalmazza.
+Az alkalmazás a tényleges rendszerbuildből ismeri fel a Windows 11-et.
+Az **AI-motor és erőforrások → Windows 11 és AI ellenőrzése** gomb a
+kiválasztott AI-motor saját Pythonjával rövid, valódi GPU-számítást ellenőriz,
+és helyi jelentést ment. Kiírja a GPU-t, videomemóriát és a ROCm/HIP vagy CUDA
+hátteret. Natív motorhiba esetén rövid hibát jelez és megállítja a munkasort.
+A folytatási napló Windows alatt atomi, felülírást tiltó átnevezéssel készül:
+nincs szüksége hard-link létrehozási jogosultságra. A csomagolt AMD motorhoz
+64 bites Windows 11 / x64 kell; a meglévő modellek újra használhatók.
+A program nem módosít Windows-védelmet és nem telepít illesztőprogramot.
+A célzott Windows-eseménynapló-lekérdezés időkorlátja lezáratlan segédfolyamat-cső esetén is véges marad. A saját ComfyUI offline módban indul.
+
+A **18. javítás** memóriavédelmei megmaradtak. A saját Élethű motor modellhez kötött figyelemszámítása a nem pontosan osztható álló képméreteket is kisebb részekben kezeli. Megszünteti a hibát, amely 832×1056-os képnél, 33 képkockával egyszerre 71,08 GiB videomemóriát próbált lefoglalni. Egy 32 bites pontszámpuffer legfeljebb 128 MiB; ez nem a teljes GPU-memóriahasználat korlátja. A teljes kulcssor részt vesz a számításban, a felbontás és videóhossz megmarad. Memóriahiánynál rövid hiba jelenik meg, a teljes technikai előzmény a helyi `history.json` fájlban marad; a munkasor következő elemei várakoznak. Új modellletöltés nem szükséges. A javítás nem garantál gyorsabb generálást vagy jobb arcminőséget.
 
 A 17. javítás motorindítási javítása megmaradt: közvetlen helyi HTTP-kapcsolat, munkasor alapú készenléti ellenőrzés, a csomag hálózati biztonsági adatfájljának megőrzése, változatlan tanúsítvány-ellenőrzés.
 

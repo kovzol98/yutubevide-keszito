@@ -56,6 +56,9 @@ class WorkspaceFixture(unittest.TestCase):
 
     def setUp(self):
         # TemporaryDirectory has an inherited-ACL issue in this Windows sandbox.
+        events = patch('gpu_health.read_display_resets', return_value=[])
+        events.start()
+        self.addCleanup(events.stop)
         self.base = FIXTURES / uuid.uuid4().hex
         self.base.mkdir(parents=True)
         self.addCleanup(self.remove_workspace)

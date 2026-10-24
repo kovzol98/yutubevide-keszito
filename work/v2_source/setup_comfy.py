@@ -204,6 +204,8 @@ def check(target=None):
 
 
 def setup(target=None, log=None, cancel=None):
+    from windows_support import require_amd_windows
+    require_amd_windows()
     root = Path(target or native_setup.default_target()).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
     portable = root / "ComfyUI_windows_portable"

@@ -1,3 +1,34 @@
+YouTube Műhely 2 – Windows 11
+Változat: 2026.10.24-windows11-v19
+
+A fejlécben a 19. javítás és a Windows 11 felirat látható.
+A tényleges Windows-build alapján ismeri fel a rendszert, akkor is,
+ha frissítés után a rendszerleíró adatbázis ProductName mezője Windows 10 maradt.
+Az AI-motor és erőforrások résznél új Windows 11 és AI ellenőrzése gomb van.
+A kiválasztott motor saját Pythonjában egy rövid, tényleges GPU-számítást
+ellenőriz. Kiírja a GPU-t, a videomemóriát és az AMD ROCm/HIP vagy CUDA hátteret.
+A jelentés az alkalmazás Ellenorzesek mappájába kerül.
+Nem elég a kártya felismerése: a számításnak véges és helyes eredményt kell adnia.
+Az ellenőrzés megszakítható és időkorlátos; új modellt nem tölt le.
+
+Az AMD motor telepítése és saját folyamatának indítása előtt ellenőrzi
+a 64 bites Windows 11 / x64 környezetet.
+A natív motor-összeomlás (például 0xC0000005) rövid hibaüzenetet kap,
+és leállítja a munkasort. Nem fogadja el kész videóként a hibás eredményt.
+Az ellenőrzés nem módosít illesztőprogramot vagy Windows-védelmet.
+A meglévő modellek és az eddigi memória-, GPU- és képkockavédelmek megmaradnak.
+Az angol narráció, háttérzene, táncminták és a munkasor tovább használható.
+A Windows 11 önmagában nem garantál jobb arcminőséget vagy gyorsabb generálást.
+
+A folytatási napló Windows alatt atomi, felülírást tiltó átnevezéssel
+készül. A mentés így akkor is működik, ha a merev hivatkozás (hard link)
+létrehozását a fájlrendszer vagy a futtatási környezet nem engedi.
+
+A Windows GPU-események lekérdezése lezárt csőre várás helyett átmeneti
+fájlba gyűjti a célzott adatokat. Az időkorlát a segédfolyamat leállítása
+után is véges marad; olvasási jogosultság hiányában a videókészítés folytatható.
+
+A 18. javítás részletei:
 YouTube Műhely 2 – Memóriahasználat javítása álló képeknél
 Változat: 2026.10.22-attention-v18
 

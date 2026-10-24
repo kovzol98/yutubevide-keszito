@@ -1,6 +1,6 @@
 # YouTube Műhely 2 – fotóból mozgó jelenet
 
-Változat: `2026.10.22-attention-v18` · 18. javítás
+Változat: `2026.10.24-windows11-v19` · 19. javítás · Windows 11
 
 Magyar Windows-program, angol narrációval és hozzáadható háttérzenével. Szövegből vagy fotóból mozgó jeleneteket készít, majd feltölthető MP4-videóvá állítja össze őket. Alapból helyben számol; külön választható, fizetős Grok internetes kapcsolat is van. A kezelőfelület meleg grafit, krém és borostyán színű.
 
@@ -19,6 +19,27 @@ A fő videóbeállítások a szélesebb **bal oldalon** találhatók: kép és f
 Ezen a gépen a motor már telepítve van. Ha a program más helyre kerül, az **AI-motor és erőforrások** résznél válaszd ki az `AI_Motor` mappát. A mellékelt `AI_MOTOR_HELYE.txt` az itteni motor helyét tartalmazza.
 
 A készítés indításakor a program minden felhasznált fotó és videó olvashatóságát ellenőrzi, még az első jelenet elkészítése vagy AI-generálása előtt. A hiányzó vagy sérült forrást előbb cseréld ki.
+
+## Windows 11 és az AMD AI-motor ellenőrzése
+
+Az **AI-motor és erőforrások → Windows 11 és AI ellenőrzése** gomb
+a kiválasztott motorral tényleges, rövid GPU-számítást futtat. Az ellenőrzés
+külön, megszakítható folyamatban történik, időkorláttal. Kiírja a Windows
+verzióját, a videókártyát, a videomemóriát és a számítási hátteret.
+A jelentést az alkalmazás **Ellenorzesek** mappájában menti.
+
+A csomagolt AMD motorhoz **64 bites Windows 11 / x64** szükséges.
+A már meglévő **AI_Motor** mappát válaszd ki; a nagy modelleket nem kell
+csak az operációs rendszer frissítése miatt újra letölteni.
+Az Armoury Crate nem szükséges a videókészítő működéséhez.
+
+Ha a kártya felismerése sikerül, de a számítási próba hibázik, a generálás
+még nem tekinthető működőképesnek. Natív motorhiba esetén a munkasor megáll.
+A program nem telepít videokártya-illesztőprogramot és nem változtat
+Windows-védelmi beállításokat.
+
+Hivatalos AMD támogatási adatok:
+https://www.amd.com/en/resources/support-articles/release-notes/RN-AMDGPU-WINDOWS-PYTORCH-7-2-1.html
 
 ## A helyi AI-motor indítása
 

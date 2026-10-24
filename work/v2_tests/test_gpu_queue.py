@@ -82,6 +82,10 @@ class GpuQueueTests(unittest.TestCase):
     def test_uniform_or_corrupt_frame_failure_stops_after_failed_first_job(self):
         self.assert_stops_queue(FrameIntegrityError('Invalid generated frames'))
 
+    def test_windows_native_crash_preserves_pending_jobs(self):
+        from windows_support import native_failure
+        self.assert_stops_queue(native_failure(3221225477))
+
     def test_comfy_memory_failure_stops_after_failed_first_job(self):
         self.assert_stops_queue(ComfyOutOfMemoryError('Nincs elég memória az AI-jelenethez.'))
 

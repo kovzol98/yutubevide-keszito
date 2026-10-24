@@ -14,6 +14,8 @@ def assets():
         json.loads((home/'rife_asset.json').read_text(encoding='utf-8'))]
 
 def setup(target,log=print,cancel=None):
+    from windows_support import require_amd_windows
+    require_amd_windows()
     import setup_comfy,setup_portrait,portrait_video
     root=Path(target).expanduser().resolve();root.mkdir(parents=True,exist_ok=True)
     setup_ai._guard(cancel)

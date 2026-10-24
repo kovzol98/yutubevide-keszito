@@ -253,7 +253,7 @@ class WindowsEventReaderTests(unittest.TestCase):
         return SimpleNamespace(stdout=output, stderr='', returncode=returncode)
 
     def test_query_is_hidden_bounded_read_only_and_does_not_capture_messages(self):
-        with patch.object(health.os, 'name', 'nt'), patch.object(health.subprocess, 'run', return_value=self.result()) as run:
+        with patch.object(health.os, 'name', 'nt'), patch.object(health, '_bounded_query', return_value=self.result()) as run:
             self.assertEqual(health.read_display_resets(self.start, self.end), [])
         args, options = run.call_args
         argv = args[0]
@@ -273,29 +273,29 @@ class WindowsEventReaderTests(unittest.TestCase):
 
     def test_json_event_is_normalized_with_record_id_and_utc_time(self):
         data = [{'record_id': 789, 'timestamp': '2026-10-21T08:04:45.1234567+02:00', 'event_id': 4101, 'provider': 'Display'}]
-        with patch.object(health.os, 'name', 'nt'), patch.object(health.subprocess, 'run', return_value=self.result(json.dumps(data))):
+        with patch.object(health.os, 'name', 'nt'), patch.object(health, '_bounded_query', return_value=self.result(json.dumps(data))):
             events = health.read_display_resets(self.start, self.end)
         self.assertEqual(events[0].record_id, 789)
         self.assertEqual(events[0].timestamp.tzinfo, timezone.utc)
 
     def test_failed_or_malformed_queries_are_nonfatal(self):
         for result in (self.result('', 3), self.result('invalid'), self.result('{}'), self.result('x' * 65537)):
-            with self.subTest(result=result), patch.object(health.os, 'name', 'nt'), patch.object(health.subprocess, 'run', return_value=result):
+            with self.subTest(result=result), patch.object(health.os, 'name', 'nt'), patch.object(health, '_bounded_query', return_value=result):
                 self.assertIsNone(health.read_display_resets(self.start, self.end))
 
     def test_missing_powershell_and_timeout_are_nonfatal(self):
         for error in (FileNotFoundError(), PermissionError(), subprocess.TimeoutExpired('powershell.exe', 4)):
-            with self.subTest(error=error), patch.object(health.os, 'name', 'nt'), patch.object(health.subprocess, 'run', side_effect=error):
+            with self.subTest(error=error), patch.object(health.os, 'name', 'nt'), patch.object(health, '_bounded_query', side_effect=error):
                 self.assertIsNone(health.read_display_resets(self.start, self.end))
 
     def test_non_windows_reader_never_starts_subprocess(self):
-        with patch.object(health.os, 'name', 'posix'), patch.object(health.subprocess, 'run') as run:
+        with patch.object(health.os, 'name', 'posix'), patch.object(health, '_bounded_query') as run:
             self.assertIsNone(health.read_display_resets(self.start, self.end))
         run.assert_not_called()
 
     def test_unrelated_json_records_are_discarded(self):
         data = [{'record_id': 789, 'timestamp': self.start.isoformat(), 'event_id': 1001, 'provider': 'Windows Error Reporting'}]
-        with patch.object(health.os, 'name', 'nt'), patch.object(health.subprocess, 'run', return_value=self.result(json.dumps(data))):
+        with patch.object(health.os, 'name', 'nt'), patch.object(health, '_bounded_query', return_value=self.result(json.dumps(data))):
             self.assertEqual(health.read_display_resets(self.start, self.end), [])
 
 

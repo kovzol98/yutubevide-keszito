@@ -14,6 +14,7 @@ import math
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import time
 import uuid
 
@@ -94,6 +95,33 @@ def _event(value):
         return None
 
 
+def _bounded_query(command, *, timeout, creationflags):
+    # A killed Windows helper can leave an inherited stdout pipe open in a
+    # descendant. subprocess.run then waits without a timeout while draining
+    # that pipe. A temporary file needs no reader thread and no EOF wait.
+    with tempfile.TemporaryFile(mode='w+b') as output:
+        process = subprocess.Popen(command, stdin=subprocess.DEVNULL,
+            stdout=output, stderr=subprocess.DEVNULL, creationflags=creationflags)
+        try:
+            process.wait(timeout=timeout)
+        except BaseException:
+            try:
+                if process.poll() is None:
+                    process.terminate()
+                process.wait(timeout=.3)
+            except (OSError, subprocess.SubprocessError):
+                try:
+                    process.kill()
+                    process.wait(timeout=.3)
+                except (OSError, subprocess.SubprocessError):
+                    pass
+            raise
+        output.seek(0)
+        raw = output.read(65537)
+    return subprocess.CompletedProcess(command, process.returncode,
+        raw.decode('utf-8-sig', errors='replace'))
+
+
 def read_display_resets(start, end):
     """Return only Display/4101 records in the UTC interval, or None if unreadable.
 
@@ -129,11 +157,10 @@ def read_display_resets(start, end):
     )
     encoded = base64.b64encode(script.encode('utf-16le')).decode('ascii')
     try:
-        result = subprocess.run(
+        result = _bounded_query(
             ['powershell.exe', '-NoLogo', '-NoProfile', '-NonInteractive',
              '-EncodedCommand', encoded],
-            capture_output=True, text=True, encoding='utf-8', errors='replace',
-            timeout=QUERY_TIMEOUT, creationflags=CREATE_NO_WINDOW, check=False,
+            timeout=QUERY_TIMEOUT, creationflags=CREATE_NO_WINDOW,
         )
         if result.returncode != 0 or len(result.stdout) > 65536:
             return None

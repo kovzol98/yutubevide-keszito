@@ -57,9 +57,10 @@ def diagnose(request_file):
     if not root.is_dir():
         raise ValueError('Az AI-motor mappája nem található.')
 
+    from windows_support import system_info
     started = time.monotonic()
     messages, requests = [], []
-    report = dict(schema=1, status='RUNNING',
+    report = dict(schema=1, status='RUNNING', system=system_info(),
         started_utc=datetime.now(timezone.utc).isoformat(),
         frozen=bool(getattr(sys, 'frozen', False)),
         app_release=ytmuhely.APP_RELEASE,
@@ -92,6 +93,9 @@ def diagnose(request_file):
                              text=_safe_text(message)))
 
     engine = ytmuhely.Engine(log=log)
+    if request.get('profile_imports') is True:
+        engine._comfy_profile_imports = True
+        report['profile_imports'] = True
     # A final deadline also bounds future startup-policy changes. Each network
     # operation retains its own timeout, and cleanup has bounded process waits.
     normal_check = engine.check

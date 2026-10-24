@@ -288,6 +288,8 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
             engine._comfy_url, engine._comfy_root = base, str(root)
             engine.log("A már futó ComfyUI-t használom.")
             return base
+    from windows_support import require_amd_windows
+    require_amd_windows()
     portable = _portable(root)
     model_root = str(root / "models").replace("\\", "/")
     configuration = "youtube_muhely_shared:\n  base_path: %s\n  diffusion_models: diffusion_models\n  unet: diffusion_models\n  text_encoders: text_encoders\n  clip: text_encoders\n  vae: vae\n" % json.dumps(model_root)
@@ -300,9 +302,11 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
     log_offset = handle.tell()
     handle.write(('\n=== YouTube Muhely motorinditas %s ===\n' % uuid.uuid4().hex).encode('ascii'))
     command = [str(portable / "python_embeded/python.exe"), "-s", str(portable / "ComfyUI/main.py"),
-               "--windows-standalone-build", "--listen", "127.0.0.1", "--port", str(port),
+               "--windows-standalone-build", "--offline", "--listen", "127.0.0.1", "--port", str(port),
                "--use-split-cross-attention", "--disable-async-offload", "--disable-pinned-memory",
                "--extra-model-paths-config", str(yaml)]
+    if getattr(engine, '_comfy_profile_imports', False):
+        command[1:1] = ['-X', 'importtime']
     try:
         process = subprocess.Popen(command, cwd=str(portable), stdout=handle, stderr=subprocess.STDOUT,
                                    stdin=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -323,6 +327,11 @@ def _ensure_server(engine, root, model_names=None, required_extra=(), force_owne
             if process.poll() is not None:
                 diagnostics['process_exited'] = True
                 tail = _startup_tail(log_path, log_offset)
+                from windows_support import native_failure
+                native = native_failure(process.returncode)
+                if native is not None:
+                    diagnostics["exit_code"] = process.returncode
+                    raise native
                 raise RuntimeError("A helyi AI-videómotor nem indult el.\n" + tail)
             if _probe(base, diagnostics=diagnostics):
                 diagnostics['elapsed_seconds'] = time.monotonic()-started

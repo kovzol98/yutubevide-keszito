@@ -216,10 +216,14 @@ def _atomic_create(root, data):
             json.dump(data, handle, ensure_ascii=False, allow_nan=False, indent=2)
             handle.flush()
             os.fsync(handle.fileno())
-        # Atomic no-replace publication: a racing creator cannot overwrite a
-        # journal. NTFS supports hard links, and both names share this folder.
+        # Windows rename is atomic and refuses an existing destination.
+        # It also works where hard-link creation is unavailable/denied.
+        # POSIX rename would replace a racing creator, so retain link there.
         try:
-            os.link(partial, target)
+            if os.name == 'nt':
+                os.rename(partial, target)
+            else:
+                os.link(partial, target)
         except FileExistsError as error:
             raise ValueError('Ebben a mappában már van folytatási napló; azt nem írjuk felül.') from error
     finally:
